@@ -1,0 +1,11 @@
+﻿DEFINE 
+//Системные
+////Разделители столбцов сводной
+Measure _measures[_blank_1] = BLANK()
+Measure _measures[_blank_2] = BLANK()
+Measure _measures[_blank_3] = BLANK()
+Measure _measures[_blank_4] = BLANK()
+Measure _measures[_blank_5] = BLANK()
+Measure _measures[_blank_6] = BLANK()
+Measure _measures[_blank_7] = BLANK()
+Measure _measures[_blank_8] = BLANK()

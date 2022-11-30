@@ -1,0 +1,66 @@
+﻿ DEFINE 
+MEASURE 'статус влр'[кол-во влр] = COUNTROWS('статус влр')
+MEASURE 'статус влр'[кол-во влр передано на проверку] = 
+	VAR _amt = 
+		CALCULATE( 
+		[кол-во влр],
+		'статус влр'[передан на проверку] <> BLANK()
+	)
+	VAR _zero_condition = NOT(ISBLANK([кол-во влр])) && ISBLANK(_amt)
+	VAR _result = IF(_zero_condition,0,_amt)
+	RETURN _result
+	
+MEASURE 'статус влр'[кол-во влр выдано замечаний] = 
+	CALCULATE( 
+		[кол-во влр],
+		'статус влр'[выданы замечания] <> BLANK(),
+		'статус влр'[согласован оп] = BLANK()
+	)
+	
+MEASURE 'статус влр'[кол-во влр согласовано оп] = 
+	VAR _amt = 
+		CALCULATE( 
+			[кол-во влр],
+			'статус влр'[согласован оп] <> BLANK()
+		)
+	VAR _zero_condition = NOT(ISBLANK([кол-во влр])) && ISBLANK(_amt)
+	VAR _result = IF(_zero_condition,0,_amt)
+	RETURN _result
+	
+MEASURE 'статус влр'[кол-во влр подписано оп] = 
+	VAR _amt = 
+		CALCULATE( 
+			[кол-во влр],
+			'статус влр'[подписан оп] <> BLANK()
+		)
+	VAR _zero_condition = NOT(ISBLANK([кол-во влр])) && ISBLANK(_amt)
+	VAR _result = IF(_zero_condition,0,_amt)
+	RETURN _result
+	
+MEASURE 'статус влр'[кол-во влр согласовано цок] = 
+	VAR _amt = 
+		CALCULATE( 
+			[кол-во влр],
+			'статус влр'[согласован цок] <> BLANK()
+		)
+	VAR _zero_condition = NOT(ISBLANK([кол-во влр])) && ISBLANK(_amt)
+	VAR _result = IF(_zero_condition,0,_amt)
+	RETURN _result
+	
+MEASURE 'статус влр'[% влр передано на проверку] = DIVIDE( [кол-во влр передано на проверку], [кол-во влр] )
+MEASURE 'статус влр'[% влр выдано замечаний] = DIVIDE( [кол-во влр выдано замечаний], [кол-во влр] )
+MEASURE 'статус влр'[% влр согласовано оп] = DIVIDE( [кол-во влр согласовано оп], [кол-во влр] )
+MEASURE 'статус влр'[% влр подписано оп] = DIVIDE( [кол-во влр подписано оп], [кол-во влр] )
+MEASURE 'статус влр'[% влр согласовано цок] = DIVIDE( [кол-во влр согласовано цок], [кол-во влр] )
+MEASURE 'статус влр'[влр дата актуализации] = 
+//	VAR _min_date = MIN('статус вкс'[дата актуализации])
+	VAR _max_date = MAX('статус вкс'[дата актуализации])
+//	VAR _concatenate_date = 
+//		FORMAT(_min_date, "DD MM YYYY") & 
+//		" - " & FORMAT(_max_date, "DD MM YYYY")
+	RETURN _max_date
+MEASURE 'статус влр'[влр примечание] = 
+	IF(
+		ISINSCOPE('статус влр'[ведомость имя]),
+		SELECTEDVALUE('статус влр'[примечание])
+	)

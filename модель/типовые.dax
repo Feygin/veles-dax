@@ -1,0 +1,69 @@
+﻿MEASURE _measures[_tipovie_hierarchy] = 
+    VAR _is_tipovie_lvl4_in_scope = 
+    	ISFILTERED('типовые'[типовые ур4]) ||
+    	ISFILTERED('типовые'[типовые ур4 наименование]) ||
+    	ISFILTERED('типовые'[типовые ур4 наименование с ед изм]) ||
+    	ISFILTERED('типовые'[типовые ур4 наименование с ед изм и кодом])
+    VAR _is_tipovie_lvl3_in_scope = 
+    	ISFILTERED('типовые'[типовые ур3]) ||
+    	ISFILTERED('типовые'[типовые ур3 наименование]) ||
+    	ISFILTERED('типовые'[типовые ур3 наименование с ед изм]) ||
+    	ISFILTERED('типовые'[типовые ур3 наименование с ед изм и кодом])
+    VAR _is_tipovie_lvl2_in_scope = 
+    	ISFILTERED('типовые'[типовые ур2]) ||
+    	ISFILTERED('типовые'[типовые ур2 наименование]) ||
+    	ISFILTERED('типовые'[типовые ур2 наименование с ед изм]) ||
+    	ISFILTERED('типовые'[типовые ур2 наименование с ед изм и кодом])
+    VAR _is_tipovie_lvl1_in_scope = 
+    	ISFILTERED('типовые'[типовые ур1]) ||
+    	ISFILTERED('типовые'[типовые ур1 наименование]) ||
+    	ISFILTERED('типовые'[типовые ур1 наименование с ед изм]) ||
+    	ISFILTERED('типовые'[типовые ур1 наименование с ед изм и кодом])
+    VAR _is_tipovie_lvl0_in_scope = 
+    	ISFILTERED('типовые'[типовые ур0]) ||
+    	ISFILTERED('типовые'[типовые ур0 наименование]) ||
+    	ISFILTERED('типовые'[типовые ур0 наименование с ед изм]) ||
+    	ISFILTERED('типовые'[типовые ур0 наименование с ед изм и кодом])
+	VAR _browsing_lvl = 
+		SWITCH(
+			TRUE();
+			_is_tipovie_lvl4_in_scope; "типовые ур4";
+			_is_tipovie_lvl3_in_scope; "типовые ур3";
+			_is_tipovie_lvl2_in_scope; "типовые ур2";
+			_is_tipovie_lvl1_in_scope; "типовые ур1";
+			_is_tipovie_lvl0_in_scope; "типовые ур0";
+			"без фильтра"
+ 		)
+	RETURN _browsing_lvl
+
+MEASURE _measures[_tipovie_browse_depth] =
+	ISFILTERED('типовые'[типовые ур4]) +
+	ISFILTERED('типовые'[типовые ур4 наименование]) +
+	ISFILTERED('типовые'[типовые ур4 наименование с ед изм]) +
+	ISFILTERED('типовые'[типовые ур4 наименование с ед изм и кодом]) +
+	ISFILTERED('типовые'[типовые ур3]) +
+	ISFILTERED('типовые'[типовые ур3 наименование]) +
+	ISFILTERED('типовые'[типовые ур3 наименование с ед изм]) +
+	ISFILTERED('типовые'[типовые ур3 наименование с ед изм и кодом]) +
+	ISFILTERED('типовые'[типовые ур2]) +
+	ISFILTERED('типовые'[типовые ур2 наименование]) +
+	ISFILTERED('типовые'[типовые ур2 наименование с ед изм]) +
+	ISFILTERED('типовые'[типовые ур2 наименование с ед изм и кодом]) +
+	ISFILTERED('типовые'[типовые ур1]) +
+	ISFILTERED('типовые'[типовые ур1 наименование]) +
+	ISFILTERED('типовые'[типовые ур1 наименование с ед изм]) +
+	ISFILTERED('типовые'[типовые ур1 наименование с ед изм и кодом]) +
+	ISFILTERED('типовые'[типовые ур0]) +
+	ISFILTERED('типовые'[типовые ур0 наименование]) +
+	ISFILTERED('типовые'[типовые ур0 наименование с ед изм]) +
+	ISFILTERED('типовые'[типовые ур0 наименование с ед изм и кодом])
+
+MEASURE _measures[_tipovie_row_depth] = MAX('типовые'[типовые ур глубина])
+
+//MEASURE _measures[_tipovie_grain] = COUNTROWS ( 'типовые' )
+//MEASURE _measures[_tipovie_lvl0_grain] = 
+//	CALCULATE(
+//		COUNTROWS ( 'типовые' ),
+//		ALL( 'типовые' ),
+//		VALUES('типовые'[типовые ур0])
+	)

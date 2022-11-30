@@ -1,0 +1,26 @@
+﻿EVALUATE --при invalid relationship
+	ADDCOLUMNS( 
+		SUMMARIZE('fact';'dim'[id]); --summarize добавляет blank row
+		"@countrows"; CALCULATE(COUNTROWS('fact')); --содержащую все строки invalid relationship
+		"@sum"; CALCULATE(SUM('fact'[val])) --и все значения
+	)
+
+EVALUATE
+	FILTER( --при необходимости ее можно убрать фильтром
+		ADDCOLUMNS(
+			SUMMARIZE('fact';'dim'[id]);
+			"@countrows"; CALCULATE(COUNTROWS('fact'));
+			"@sum"; CALCULATE(SUM('fact'[val]))
+		);
+		[id] <> BLANK()
+	)
+
+EVALUATE
+	CALCULATETABLE( --при наличии внешних фильтров убирается автоматичсеки
+		ADDCOLUMNS(
+			SUMMARIZE('fact';'dim'[id]);
+			"@countrows"; CALCULATE(COUNTROWS('fact'));
+			"@sum"; CALCULATE(SUM('fact'[val]))
+		);
+		dim[cat] IN {"fact"; "missing"}
+	)

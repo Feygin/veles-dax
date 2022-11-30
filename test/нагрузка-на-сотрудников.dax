@@ -1,0 +1,268 @@
+﻿DEFINE 
+MEASURE 'проект'[кол-во проектов] = COUNTROWS('проект')
+
+MEASURE 'проект'[кол-во сотрудников оп] = DISTINCTCOUNT( 'ответственный оп'[ответственный оп] )
+MEASURE 'проект'[кол-во сотрудников оп на проект] = DIVIDE( [кол-во сотрудников оп], [кол-во проектов] )
+
+MEASURE 'проект'[кол-во баз и моделей на сотрудника] = DIVIDE( [кол-во баз и моделей], [кол-во сотрудников оп] )
+
+MEASURE 'проект'[кол-во ЕТ1 на сотрудника] = DIVIDE( [кол-во ЕТ1], [кол-во сотрудников оп] )
+MEASURE 'проект'[кол-во активных ЕТ1 на сотрудника] = DIVIDE( [кол-во активных ЕТ1], [кол-во сотрудников оп] )
+
+MEASURE 'ответственный оп'[список сотрудников оп] = 
+	IF(
+		HASONEVALUE('проект'[ответственный цок краткое]) ||
+		HASONEVALUE('проект'[проект отчет]),
+				CONCATENATEX(
+					VALUES('ответственный оп'[ответственный оп краткое]),
+					'ответственный оп'[ответственный оп краткое],
+					", "
+				)
+	)
+
+//условние форматирование 
+MEASURE 'проект'[усл формат кол-во проектов] = 
+	VAR _red = "#fb0800"
+	VAR _grey = "#aaa9a9"
+	VAR _green = "#3f8d1f"
+	VAR UpperBoundary = 0.75
+	VAR LowerBoundary = 0.25
+	VAR CurrentValue = [кол-во проектов]
+	VAR UpperPercentile = 
+		CALCULATE(
+			PERCENTILEX.EXC(VALUES('проект'[ответственный цок]), [кол-во проектов], UpperBoundary),
+			ALLSELECTED()
+		)
+	VAR LowerPercentile = 
+		CALCULATE(
+			PERCENTILEX.EXC(VALUES('проект'[ответственный цок]), [кол-во проектов], LowerBoundary),
+			ALLSELECTED()
+		)
+	VAR Result = 
+		SWITCH(
+			TRUE(),
+			CurrentValue >= UpperPercentile, _red,
+			CurrentValue < UpperPercentile && 
+				CurrentValue > LowerPercentile, _grey,
+			CurrentValue <= LowerPercentile, _green
+		)
+	RETURN Result 
+
+MEASURE 'проект'[усл формат кол-во сотрудников оп] = 
+	VAR _red = "#fb0800"
+	VAR _grey = "#aaa9a9"
+	VAR _green = "#3f8d1f"
+	VAR UpperBoundary = 0.75
+	VAR LowerBoundary = 0.25
+	VAR CurrentValue = [кол-во сотрудников оп]
+	VAR UpperPercentile = 
+		CALCULATE(
+			PERCENTILEX.EXC(VALUES('проект'[ответственный цок]), [кол-во сотрудников оп], UpperBoundary),
+			ALLSELECTED()
+		)
+	VAR LowerPercentile = 
+		CALCULATE(
+			PERCENTILEX.EXC(VALUES('проект'[ответственный цок]), [кол-во сотрудников оп], LowerBoundary),
+			ALLSELECTED()
+		)
+	VAR Result = 
+		SWITCH(
+			TRUE(),
+			CurrentValue >= UpperPercentile, _green,
+			CurrentValue < UpperPercentile && 
+				CurrentValue > LowerPercentile, _grey,
+			CurrentValue <= LowerPercentile, _red
+		)
+	RETURN Result 
+
+MEASURE 'проект'[усл формат кол-во сотрудников оп на проект] = 
+	VAR _red = "#fb0800"
+	VAR _grey = "#aaa9a9"
+	VAR _green = "#3f8d1f"
+	VAR UpperBoundary = 0.75
+	VAR LowerBoundary = 0.25
+	VAR CurrentValue = [кол-во сотрудников оп на проект]
+	VAR UpperPercentile = 
+		CALCULATE(
+			PERCENTILEX.EXC(VALUES('проект'[ответственный цок]), [кол-во сотрудников оп на проект], UpperBoundary),
+			ALLSELECTED()
+		)
+	VAR LowerPercentile = 
+		CALCULATE(
+			PERCENTILEX.EXC(VALUES('проект'[ответственный цок]), [кол-во сотрудников оп на проект], LowerBoundary),
+			ALLSELECTED()
+		)
+	VAR Result = 
+		SWITCH(
+			TRUE(),
+			CurrentValue >= UpperPercentile, _green,
+			CurrentValue < UpperPercentile && 
+				CurrentValue > LowerPercentile, _grey,
+			CurrentValue <= LowerPercentile, _red
+		)
+	RETURN Result 
+
+MEASURE 'проект'[усл формат кол-во баз и моделей] = 
+	VAR _red = "#fb0800"
+	VAR _grey = "#aaa9a9"
+	VAR _green = "#3f8d1f"
+	VAR UpperBoundary = 0.75
+	VAR LowerBoundary = 0.25
+	VAR CurrentValue = [кол-во баз и моделей]
+	VAR UpperPercentile = 
+		CALCULATE(
+			PERCENTILEX.EXC(VALUES('проект'[ответственный цок]), [кол-во баз и моделей], UpperBoundary),
+			ALLSELECTED()
+		)
+	VAR LowerPercentile = 
+		CALCULATE(
+			PERCENTILEX.EXC(VALUES('проект'[ответственный цок]), [кол-во баз и моделей], LowerBoundary),
+			ALLSELECTED()
+		)
+	VAR Result = 
+		SWITCH(
+			TRUE(),
+			CurrentValue >= UpperPercentile, _red,
+			CurrentValue < UpperPercentile && 
+				CurrentValue > LowerPercentile, _grey,
+			CurrentValue <= LowerPercentile, _green
+		)
+	RETURN Result 
+
+MEASURE 'проект'[усл формат кол-во баз и моделей на сотрудника] = //////////////////
+	VAR _red = "#fb0800"
+	VAR _grey = "#aaa9a9"
+	VAR _green = "#3f8d1f"
+	VAR UpperBoundary = 0.75
+	VAR LowerBoundary = 0.25
+	VAR CurrentValue = [кол-во баз и моделей на сотрудника]
+	VAR UpperPercentile = 
+		CALCULATE(
+			PERCENTILEX.EXC(VALUES('проект'[ответственный цок]), [кол-во баз и моделей на сотрудника], UpperBoundary),
+			ALLSELECTED()
+		)
+	VAR LowerPercentile = 
+		CALCULATE(
+			PERCENTILEX.EXC(VALUES('проект'[ответственный цок]), [кол-во баз и моделей на сотрудника], LowerBoundary),
+			ALLSELECTED()
+		)
+	VAR Result = 
+		SWITCH(
+			TRUE(),
+			CurrentValue >= UpperPercentile, _red,
+			CurrentValue < UpperPercentile && 
+				CurrentValue > LowerPercentile, _grey,
+			CurrentValue <= LowerPercentile, _green
+		)
+	RETURN Result 
+
+MEASURE 'проект'[усл формат кол-во ет1] = 
+	VAR _red = "#fb0800"
+	VAR _grey = "#aaa9a9"
+	VAR _green = "#3f8d1f"
+	VAR UpperBoundary = 0.75
+	VAR LowerBoundary = 0.25
+	VAR CurrentValue = [кол-во ет1]
+	VAR UpperPercentile = 
+		CALCULATE(
+			PERCENTILEX.EXC(VALUES('проект'[ответственный цок]), [кол-во ет1], UpperBoundary),
+			ALLSELECTED()
+		)
+	VAR LowerPercentile = 
+		CALCULATE(
+			PERCENTILEX.EXC(VALUES('проект'[ответственный цок]), [кол-во ет1], LowerBoundary),
+			ALLSELECTED()
+		)
+	VAR Result = 
+		SWITCH(
+			TRUE(),
+			CurrentValue >= UpperPercentile, _red,
+			CurrentValue < UpperPercentile && 
+				CurrentValue > LowerPercentile, _grey,
+			CurrentValue <= LowerPercentile, _green
+		)
+	RETURN Result 
+	
+MEASURE 'проект'[усл формат кол-во ет1 на сотрудника] = 
+	VAR _red = "#fb0800"
+	VAR _grey = "#aaa9a9"
+	VAR _green = "#3f8d1f"
+	VAR UpperBoundary = 0.75
+	VAR LowerBoundary = 0.25
+	VAR CurrentValue = [кол-во ЕТ1 на сотрудника]
+	VAR UpperPercentile = 
+		CALCULATE(
+			PERCENTILEX.EXC(VALUES('проект'[ответственный цок]), [кол-во ет1 на сотрудника], UpperBoundary),
+			ALLSELECTED()
+		)
+	VAR LowerPercentile = 
+		CALCULATE(
+			PERCENTILEX.EXC(VALUES('проект'[ответственный цок]), [кол-во ет1 на сотрудника], LowerBoundary),
+			ALLSELECTED()
+		)
+	VAR Result = 
+		SWITCH(
+			TRUE(),
+			CurrentValue >= UpperPercentile, _red,
+			CurrentValue < UpperPercentile && 
+				CurrentValue > LowerPercentile, _grey,
+			CurrentValue <= LowerPercentile, _green
+		)
+	RETURN Result 
+
+MEASURE 'проект'[усл формат кол-во активных ет1] = 
+	VAR _red = "#fb0800"
+	VAR _grey = "#aaa9a9"
+	VAR _green = "#3f8d1f"
+	VAR UpperBoundary = 0.75
+	VAR LowerBoundary = 0.25
+	VAR CurrentValue = [кол-во активных ет1]
+	VAR UpperPercentile = 
+		CALCULATE(
+			PERCENTILEX.EXC(VALUES('проект'[ответственный цок]), [кол-во активных ет1], UpperBoundary),
+			ALLSELECTED()
+		)
+	VAR LowerPercentile = 
+		CALCULATE(
+			PERCENTILEX.EXC(VALUES('проект'[ответственный цок]), [кол-во активных ет1], LowerBoundary),
+			ALLSELECTED()
+		)
+	VAR Result = 
+		SWITCH(
+			TRUE(),
+			CurrentValue >= UpperPercentile, _red,
+			CurrentValue < UpperPercentile && 
+				CurrentValue > LowerPercentile, _grey,
+			CurrentValue <= LowerPercentile, _green
+		)
+	RETURN Result 
+
+
+
+MEASURE 'проект'[усл формат кол-во активных ет1 на сотрудника] = 
+	VAR _red = "#fb0800"
+	VAR _grey = "#aaa9a9"
+	VAR _green = "#3f8d1f"
+	VAR UpperBoundary = 0.75
+	VAR LowerBoundary = 0.25
+	VAR CurrentValue = [кол-во активных ет1 на сотрудника]
+	VAR UpperPercentile = 
+		CALCULATE(
+			PERCENTILEX.EXC(VALUES('проект'[ответственный цок]), [кол-во активных ет1 на сотрудника], UpperBoundary),
+			ALLSELECTED()
+		)
+	VAR LowerPercentile = 
+		CALCULATE(
+			PERCENTILEX.EXC(VALUES('проект'[ответственный цок]), [кол-во активных ет1 на сотрудника], LowerBoundary),
+			ALLSELECTED()
+		)
+	VAR Result = 
+		SWITCH(
+			TRUE(),
+			CurrentValue >= UpperPercentile, _red,
+			CurrentValue < UpperPercentile && 
+				CurrentValue > LowerPercentile, _grey,
+			CurrentValue <= LowerPercentile, _green
+		)
+	RETURN Result 
+ 

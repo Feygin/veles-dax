@@ -1,0 +1,67 @@
+﻿ DEFINE 
+MEASURE 'справочник журналов'[кол-во ЕТ1] = 
+	CALCULATE(
+		COUNTROWS('справочник журналов'),
+		KEEPFILTERS(NOT('справочник журналов'[журнал статус] IN {"аннулирован", "", "не предоставляется в оккс"}))
+	)
+MEASURE 'справочник журналов'[кол-во активных ЕТ1] = 
+	CALCULATE( 
+		[кол-во ЕТ1],
+		KEEPFILTERS('справочник журналов'[журнал статус] = "ведется")
+	)
+MEASURE 'справочник журналов'[кол-во ЕТ1 закрыт] = 
+	CALCULATE( 
+		[кол-во ЕТ1],
+		KEEPFILTERS('справочник журналов'[журнал статус] = "закрыт")
+	)
+MEASURE 'справочник журналов'[кол-во ЕТ1 не предоставляется] = 
+	CALCULATE( 
+		[кол-во ЕТ1],
+		KEEPFILTERS('справочник журналов'[журнал статус] = "не предоставляется")
+	)
+			
+MEASURE 'согласование журналов'[кол-во ЕТ1 получено] = SUM('согласование журналов'[журнал получен])
+MEASURE 'согласование журналов'[кол-во ЕТ1 согласовано] = SUM('согласование журналов'[журнал согласован])
+
+MEASURE 'согласование журналов'[% ЕТ1 получено] = DIVIDE( [кол-во ЕТ1 получено], [кол-во ЕТ1] )
+MEASURE 'согласование журналов'[% ЕТ1 согласовано] = DIVIDE( [кол-во ЕТ1 согласовано], [кол-во ЕТ1] )
+MEASURE 'согласование журналов'[среднее кол-во дней согласования] = MEDIAN('согласование журналов'[журнал количество дней согласования])
+
+MEASURE 'согласование журналов'[среднее кол-во дней согласования предыдущий месяц] = 
+	VAR CurrentMonthNumber = SELECTEDVALUE('календарь'[месяц год_номер])
+	VAR PreviousMonthNumber = CurrentMonthNumber - 1
+	VAR Result = 
+		CALCULATE(
+			[среднее кол-во дней согласования],
+			REMOVEFILTERS('календарь'),
+			'календарь'['календарь'[месяц год_номер]] = PreviousMonthNumber
+		)
+	RETURN Result 
+MEASURE 'согласование журналов'[среднее кол-во дней согласования предыдущая декада] = 
+	VAR CurrentDecadeNumber = SELECTEDVALUE('календарь'[декада месяц год_номер])
+	VAR PreviousDecadeNumber = CurrentDecadeNumber - 1
+	VAR Result = 
+		CALCULATE(
+			[среднее кол-во дней согласования],
+			REMOVEFILTERS('календарь'),
+			'календарь'[декада месяц год_номер] = PreviousDecadeNumber
+		)
+	RETURN Result 
+MEASURE 'согласование журналов'[кол-во незаполненых проектов] = 
+	VAR IsAnyData = 
+		NOT(
+			ISEMPTY(
+				INTERSECT(
+					VALUES('согласование журналов'[декада месяц год]),
+					VALUES('календарь'[декада месяц год])
+				)
+			)
+		)
+	VAR AllProjectCount = COUNTROWS( 'проект' )
+	VAR FilledProjectCount = 
+		COUNTROWS( 
+			SUMMARIZE( 'согласование журналов', 'справочник журналов'[проект отчет] ) 
+		)
+	VAR NotFilledProjectCount = AllProjectCount - FilledProjectCount
+	VAR Result = IF(IsAnyData, NotFilledProjectCount)
+	RETURN Result

@@ -1,0 +1,187 @@
+﻿MEASURE _Measures[_opims_hierarchy] = 
+    VAR _is_opims_lvl0_code_in_scope = ISFILTERED('опимс'[опимс])
+	VAR _is_opims_lvl0_in_scope = ISFILTERED('опимс'[опимс описание])
+	VAR _is_opims_lvl0_with_unit_in_scope = ISFILTERED('опимс'[опимс описание с ед изм и кодом])
+	VAR _is_opims_lvl3_in_scope = ISFILTERED('опимс'[опимс ур3])
+	VAR _is_opims_lvl3_with_unit_in_scope = ISFILTERED('опимс'[опимс ур3 с ед изм])
+	VAR _is_opims_lvl2_in_scope = ISFILTERED('опимс'[опимс ур2])
+	VAR _is_opims_lvl2_with_unit_in_scope = ISFILTERED('опимс'[опимс ур2 с ед изм])
+	VAR _is_opims_lvl1_in_scope = ISFILTERED('опимс'[опимс ур1])
+	VAR _is_opims_lvl1_with_unit_in_scope = ISFILTERED('опимс'[опимс ур1 с ед изм])
+    VAR _is_bp_code_in_scope = ISFILTERED('опимс'[бп])
+    VAR _is_bp_in_scope = ISFILTERED('опимс'[бп описание])
+//	VAR _is_bp_with_unit_in_scope = ISFILTERED('опимс'[бп описание с ед изм])
+//	VAR _is_daily_lvl1_in_scope = ISFILTERED('опимс'[ключевые ур1 с ед изм])
+//	VAR _isdaily_lvl2_in_scope = ISFILTERED('опимс'[ключевые ур2 с ед изм])
+	VAR _is_sub = ISFILTERED('организация'[организация отчет])
+    VAR _is_subproject = ISFILTERED('проект'[подпроект отчет])
+	VAR _is_project = ISFILTERED('проект'[проект отчет])
+	VAR BrowsingLvl = 
+		SWITCH(
+	          TRUE();
+              _is_opims_lvl0_code_in_scope; "опимс ур0";
+	          _is_opims_lvl0_in_scope; "опимс ур0";
+	          _is_opims_lvl0_with_unit_in_scope; "опимс ур0";
+	          _is_opims_lvl3_in_scope; "опимс ур3";
+	          _is_opims_lvl3_with_unit_in_scope; "опимс ур3";
+	          _is_opims_lvl2_in_scope; "опимс ур2";
+	          _is_opims_lvl2_with_unit_in_scope; "опимс ур2";
+	          _is_opims_lvl1_in_scope; "опимс ур1";
+	          _is_opims_lvl1_with_unit_in_scope; "опимс ур1";
+	          _is_bp_in_scope; "бп";
+	          _is_bp_in_scope; "бп";
+//	          _is_bp_with_unit_in_scope; "бп";
+//	          _isDaily_lvl2_in_scope; "ключевые ур2";
+//	          _is_daily_lvl1_in_scope; "ключевые ур1";
+	          _is_sub; "организация";
+              _is_subproject; "подпроект";
+			  _is_project; "проект";
+	          "без фильтра"
+	    )
+	RETURN BrowsingLvl
+	
+
+MEASURE _Measures[опимс ед изм ведущая] = 
+	VAR _lvl1_unit =
+		CALCULATE (
+		    CONCATENATEX( 
+				DISTINCT('опимс'[ед изм] ), 
+				'опимс'[ед изм], 
+				", ", 
+				'опимс'[ед изм], 
+				ASC 
+			),
+		    'опимс'[опимс ур1 вед поз] <> ""
+		)
+	VAR _lvl2_unit =
+		CALCULATE (
+		    CONCATENATEX( 
+                DISTINCT('опимс'[ед изм] ), 
+                'опимс'[ед изм], 
+                ", ", 
+                'опимс'[ед изм], 
+                ASC 
+            ),
+		    'опимс'[опимс ур2 вед поз] <> ""
+		)
+	VAR _lvl3_unit =
+		CALCULATE (
+		    CONCATENATEX( 
+                DISTINCT('опимс'[ед изм] ), 
+                'опимс'[ед изм], 
+                ", ", 
+                'опимс'[ед изм], 
+                ASC 
+            ),
+		    'опимс'[опимс ур3 вед поз] <> ""
+		)
+	VAR _lvl0_unit = 
+		CALCULATE (
+			CONCATENATEX( 
+				DISTINCT('опимс'[ед изм] ), 
+				'опимс'[ед изм], 
+				", ", 
+				'опимс'[ед изм], 
+				ASC 
+			),
+			'опимс'[опимс вед поз] <> ""
+		)
+	VAR _bp_unit =
+		CALCULATE (
+		    CONCATENATEX( 
+				DISTINCT('опимс'[ед изм] ), 
+				'опимс'[ед изм], 
+				", ", 
+				'опимс'[ед изм], 
+				ASC 
+			),
+		    'опимс'[бп вед поз] <> ""
+		)
+	VAR _units_by_level =
+		SWITCH(
+		    [_opims_hierarchy],
+		    "опимс ур0", _lvl0_unit,
+		    "опимс ур1", _lvl1_unit,
+		    "опимс ур2", _lvl2_unit,
+		    "опимс ур3", _lvl3_unit,
+		    "бп", _bp_unit
+		)
+	RETURN
+	    _units_by_level
+
+MEASURE _Measures[опимс позиции все] =
+	CONCATENATEX( 
+		DISTINCT('опимс'[опимс описание с ед изм и кодом]), 
+		'опимс'[опимс описание с ед изм и кодом], 
+		"; ", 
+		'опимс'[опимс описание с ед изм и кодом], 
+		ASC 
+	)
+
+MEASURE _Measures[опимс позиции ведущие] = 
+	VAR _lvl1_positions = 
+		CALCULATE (
+			CONCATENATEX( 
+				DISTINCT('опимс'[опимс описание с ед изм и кодом]), 
+				'опимс'[опимс описание с ед изм и кодом], 
+				"; ", 
+				'опимс'[опимс описание с ед изм и кодом], 
+				ASC 
+			),
+			'опимс'[опимс ур1 вед поз] <> ""
+		)
+	VAR _lvl2_positions =
+		CALCULATE (
+			CONCATENATEX( 
+				DISTINCT('опимс'[опимс описание с ед изм и кодом]), 
+				'опимс'[опимс описание с ед изм и кодом], 
+				"; ",
+				'опимс'[опимс описание с ед изм и кодом], 
+				ASC 
+			),
+			'опимс'[опимс ур2 вед поз] <> ""
+		)
+	VAR _lvl3_positions =
+		CALCULATE (
+			CONCATENATEX( 
+				DISTINCT('опимс'[опимс описание с ед изм и кодом]), 
+				'опимс'[опимс описание с ед изм и кодом], 
+				"; ",
+				'опимс'[опимс описание с ед изм и кодом], 
+				ASC 
+			),
+			'опимс'[опимс ур3 вед поз] <> ""
+		)
+	VAR _lvl0_positions = 
+		CALCULATE (
+			CONCATENATEX( 
+				DISTINCT('опимс'[опимс описание с ед изм и кодом]), 
+				'опимс'[опимс описание с ед изм и кодом], 
+				"; ",
+				'опимс'[опимс описание с ед изм и кодом], 
+				ASC 
+			),
+			'опимс'[опимс вед поз] <> ""
+		)
+	VAR _bp_positions =
+		CALCULATE (
+		    CONCATENATEX( 
+				DISTINCT('опимс'[опимс описание с ед изм и кодом] ), 
+				'опимс'[опимс описание с ед изм и кодом], 
+				"; ",
+				'опимс'[опимс описание с ед изм и кодом], 
+				ASC 
+			),
+		    'опимс'[бп вед поз] <> ""
+		)
+	VAR _units_by_level =
+		SWITCH(
+		    [_opims_hierarchy],
+		    "опимс ур0", _lvl0_positions,
+		    "опимс ур1", _lvl1_positions,
+		    "опимс ур2", _lvl2_positions,
+		    "опимс ур3", _lvl3_positions,
+		    "бп", _bp_positions
+		)
+	RETURN
+	    _units_by_level

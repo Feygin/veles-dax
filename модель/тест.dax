@@ -1,0 +1,38 @@
+﻿DEFINE
+MEASURE _measures[статистика факт даты производства работ] = 
+	VAR _entity_show_row = [_tipovie_browse_depth] <= [_tipovie_row_depth]
+	VAR _min_date = MIN('факт'[дата])
+	VAR _max_date = MAX('факт'[дата])
+	VAR _concatenate_date = 
+		FORMAT(_min_date; "MM/YYYY") & 
+		" - " & FORMAT(_max_date; "MM/YYYY")
+	VAR _result =
+		IF(
+			NOT(ISBLANK(_min_date)) &&
+				NOT(ISBLANK(_max_date)) &&
+				_entity_show_row;
+			_concatenate_date
+		)
+	RETURN _result
+
+
+EVALUATE
+VAR _pivot =
+	SUMMARIZECOLUMNS(
+		ROLLUPADDISSUBTOTAL(
+		    'типовые'[типовые ур0 наименование с ед изм и кодом]; "УР0 итого";
+		    'типовые'[типовые ур1 наименование с ед изм и кодом]; "УР1 итого";
+		    'типовые'[типовые ур2 наименование с ед изм и кодом]; "УР2 итого";
+		    'типовые'[типовые ур3 наименование с ед изм и кодом]; "УР3 итого";
+		    'типовые'[типовые ур4 наименование с ед изм и кодом]; "УР4 итого"
+		);
+	    "@дата работ"; [статистика факт даты производства работ]
+	)
+//VAR _filter_pivot = FILTER(_pivot; [@факт часы % уровень] = TRUE )
+RETURN _pivot
+	ORDER BY
+	    'типовые'[типовые ур0 наименование с ед изм и кодом] ASC;
+	    'типовые'[типовые ур1 наименование с ед изм и кодом] ASC;
+	    'типовые'[типовые ур2 наименование с ед изм и кодом] ASC;
+	    'типовые'[типовые ур3 наименование с ед изм и кодом] ASC;
+	    'типовые'[типовые ур4 наименование с ед изм и кодом] ASC

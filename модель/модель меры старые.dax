@@ -1,0 +1,1112 @@
+﻿////Сценарии
+MEASURE _Measures[_ScenarioExtraHoursAllocation] = 
+	VAR SelectScenario = 
+		IF(
+			HASONEVALUE('сценарий распределения доп часов'[id]),
+			VALUES('сценарий распределения доп часов'[id]),
+			1
+		)
+	RETURN SelectScenario
+
+MEASURE _Measures[_ScenarioBmProjectHoursWinter] = 
+	VAR SelectScenario = 
+		IF(
+			HASONEVALUE('сценарий расчета зимнего коэффициента'[id]),
+			VALUES('сценарий расчета зимнего коэффициента'[id]),
+			1
+		)
+	RETURN SelectScenario
+
+MEASURE _Measures[_ScenarioRkcShow] = 
+	VAR SelectScenario =
+		IF(
+			HASONEVALUE('сценарий отображения позиций ркц'[id]),
+			VALUES('сценарий отображения позиций ркц'[id]),
+			1
+		) --выбираем сценарий отображения позиций ркц
+		
+	RETURN SelectScenario
+-----------------------------------------------------------------
+-----------------------------------------------------------------
+-----------------------------------------------------------------
+//ЛР ТР
+MEASURE _Measures[ЕТ1 ЛР Контракт] = 
+	VAR HoursAmt = SUM('ет1'[часы контракт])
+	VAR HoursAmtAdj = SUM('ет1'[часы контракт зимний])
+	VAR Result =
+        SWITCH(
+        	[_ScenarioBmProjectHoursWinter];
+        	1; HoursAmt;
+        	2; HoursAmtAdj
+        )
+	RETURN
+	    Result
+
+MEASURE _Measures[ЕТ1 ЛР Факт] = 
+	CALCULATE( 
+		SUM ( 'ет1'[часы факт] );
+		ALL('ркц'[ркц поз ген вед])
+	)
+
+MEASURE _Measures[ЕТ1 ТР Факт] = 
+	CALCULATE(
+		SUM ( 'ет1'[часы факт техника] );
+		ALL('ркц'[ркц поз ген вед])
+	)
+
+MEASURE _Measures[_ЕТ1 ЛР Доп] = 
+	VAR IsSameGranularity = [_OpimsGrain] = [_OpimsAtExtraHoursGrain]
+	VAR ExtraHoursAmt =
+	    CALCULATE(
+	        SUM( 'доп часы'[часы факт] );
+	        CROSSFILTER ( 'опимс_доп часы'[опимс укр_key]; 'опимс'[опимс укр_key]; BOTH )
+	    )
+	VAR Result = IF(IsSameGranularity; ExtraHoursAmt)
+	RETURN
+	    Result
+
+MEASURE _Measures[_ЕТ1 ЛР Доп Р] = 
+	VAR IsSameGranularity = [_OpimsGrain] = [_OpimsAtExtraHoursGrain]
+	VAR IsSingleProject =
+		CALCULATE(
+			HASONEVALUE('опимс'[проект]);
+			'опимс'[проект] <> "#не определен"
+		)
+	VAR ExtraHoursAmt =
+	    CALCULATE(
+	        SUM( 'доп часы'[часы факт] );
+	        CROSSFILTER ( 'опимс_доп часы'[опимс укр_key]; 'опимс'[опимс укр_key]; BOTH )
+	    )
+	VAR BmLogHours = SUM('вм'[часы факт])
+	VAR BmLogHoursAtGrain = 
+		CALCULATE(
+			SUM('вм'[часы факт]);
+			ALL('опимс');
+			VALUES ('опимс'[опимс укр_key])
+		)	
+	VAR AllocationFactor = DIVIDE(BmLogHours; BmLogHoursAtGrain)
+	VAR ExtraHoursAllocated = AllocationFactor * ExtraHoursAmt
+	VAR Result = 
+		IF( 
+			IsSingleProject;
+			IF( IsSameGranularity; ExtraHoursAmt; ExtraHoursAllocated )
+		)
+	RETURN Result
+
+MEASURE _Measures[_ЕТ1 ЛР Доп РП] = 
+	VAR IsSingleProject =
+		CALCULATE(
+			HASONEVALUE('опимс'[проект]);
+			'опимс'[проект] <> "#не определен"
+		)
+	VAR ExtraHoursKeys = 
+		{
+			"20.1";
+			"20.2";
+			"20.3";
+			"20.4";
+			"20.5";
+			"20.6";
+			"20.7";
+			"20.8";
+			"20.9";
+			"20.10";
+			"20.11";
+			"20.12";
+			"20.13";
+			"20.14";
+			"20.15";
+			"21*"
+		}
+	
+	VAR ExtraHoursExcept20 = 
+		CALCULATE(
+			[_ЕТ1 ЛР Доп Р]
+			KEEPFILTERS( 
+				NOT('опимс'[опимс укр]  IN ExtraHoursKeys)
+			)
+		)
+		
+	VAR ExtraHours20 = 
+		 CALCULATE (
+            SUM (  'доп часы'[часы факт] );
+            ALL('опимс');
+            'опимс'[опимс укр] IN ExtraHoursKeys;
+            CROSSFILTER ( 'опимс_доп часы'[опимс укр_key]; 'опимс'[опимс укр_key]; BOTH )
+	     ) 
+	         
+	VAR BmLogHours = SUM ( 'вм'[часы факт] )
+	
+	VAR BmLogHoursAll = 
+		CALCULATE(
+			SUM('вм'[часы факт]);
+			ALL('опимс')
+		)
+			
+	VAR AllocationFactor = DIVIDE(BmLogHours; BmLogHoursAll)
+	
+	VAR ExtraHoursAllocated = AllocationFactor * ExtraHours20
+	
+	VAR Total = ExtraHoursExcept20 + ExtraHoursAllocated
+	
+	VAR Result = IF( IsSingleProject; Total)
+	
+	RETURN Result
+		
+//MEASURE _Measures[_ЕТ1 ЛР Доп Организация] = 
+//	VAR OpimsProjectGrain = [_OpimsProjectGrain]
+//	VAR OpimsCurGrain = [_OpimsGrain]
+//	VAR IsProjectGrain = (OpimsProjectGrain = OpimsCurGrain)
+//	VAR Amt = CALCULATE(
+//			        SUM( 'доп часы'[часы факт] );
+//			        CROSSFILTER ( 'опимс_доп часы'[опимс укр_key]; 'опимс'[опимс укр_key]; BOTH )
+//			    )
+//	VAR Result = IF( IsProjectGrain; Amt)
+//	RETURN Result
+
+
+MEASURE _Measures[ЕТ1 ЛР Доп] = 
+	VAR SwitchMeasure =
+            SWITCH (
+                [_ScenarioExtraHoursAllocation];
+                1; [_ЕТ1 ЛР Доп];
+                2; [_ЕТ1 ЛР Доп Р];
+                3; [_ЕТ1 ЛР Доп РП]
+//                ;
+//                4; [_ЕТ1 ЛР Доп Организация]
+            )
+    RETURN
+    	SwitchMeasure
+
+MEASURE _Measures[_ЕТ1 ЛР Факт + Доп] = 
+	VAR TotalAmt = [_ЕТ1 ЛР Доп] + [ЕТ1 ЛР Факт]
+	VAR CondToShow = [_OpimsGrain] = [_OPiMSAtExtraHoursGrain]
+	VAR Result = IF ( CondToShow; TotalAmt)
+	RETURN
+	    Result
+MEASURE _Measures[_ЕТ1 ЛР Факт + Доп Р] = [ЕТ1 ЛР Факт] + [_ЕТ1 ЛР Доп Р]
+MEASURE _Measures[_ЕТ1 ЛР Факт + Доп РП] = [ЕТ1 ЛР Факт] + [_ЕТ1 ЛР Доп РП]
+//MEASURE _Measures[_ЕТ1 ЛР Факт + Доп Организация] = 
+//	VAR OpimsProjectGrain = [_OpimsProjectGrain]
+//	VAR OpimsCurGrain = [_OpimsGrain]
+//	VAR IsProjectGrain = (OpimsProjectGrain = OpimsCurGrain)
+//	VAR Amt = [ЕТ1 ЛР Факт] + [_ЕТ1 ЛР Доп Организация]
+//	VAR Result = IF( IsProjectGrain; Amt)
+//	RETURN
+//		Result
+	
+MEASURE _Measures[ЕТ1 ЛР Факт + Доп] = 
+	VAR Result =
+	    SWITCH (
+	        [_ScenarioExtraHoursAllocation];
+	        1; [_ЕТ1 ЛР Факт + Доп];
+	        2; [_ЕТ1 ЛР Факт + Доп Р];
+	        3; [_ЕТ1 ЛР Факт + Доп РП];
+	        4; [_ЕТ1 ЛР Факт + Доп Организация]
+	    )
+	RETURN
+	    Result
+	   
+MEASURE _Measures[ЕТ1 ЛР Факт ГИ] = 
+	CALCULATE(
+		[ЕТ1 ЛР Факт];
+		'трудозатраты категория'[трудозатраты категория] = "Испытание трубопроводов"
+	)
+
+MEASURE _Measures[ЕТ1 ЛР Факт Цех] = 
+	CALCULATE(
+		[ЕТ1 ЛР Факт];
+		'ет1'[цех монтаж] = "цех"
+	)
+
+MEASURE _Measures[ЕТ1 ЛР Факт Монтаж] = 
+	CALCULATE(
+		[ЕТ1 ЛР Факт];
+		'ет1'[цех монтаж] = "монтаж"
+	)
+
+MEASURE _Measures[ЕТ1 ЛР Факт Основные Контрактные] = 
+	CALCULATE(
+		[ЕТ1 ЛР Факт];
+		'трудозатраты категория'[трудозатраты группа] = "Основные работы"
+	)
+
+MEASURE _Measures[ЕТ1 ЛР Факт Все - Сварка] = 
+	[ЕТ1 ЛР Факт] - [ЕТ1 ЛР Факт Цех] - [ЕТ1 ЛР Факт Монтаж]
+	
+MEASURE _Measures[ЕТ1 ЛР Факт Кор] = 
+	CALCULATE(
+		[ЕТ1 ЛР Факт];
+		'ет1'[корректировка маркер] <> ""
+	)
+
+MEASURE _Measures[ЕТ1 ЛР Факт Исх] = [ЕТ1 ЛР Факт] - [ЕТ1 ЛР Факт Кор]
+
+//Исправить методику расчета меры
+//MEASURE _Measures[ЕТ1 ЛР Факт % Группа] = 
+//	VAR CurHours = [ЕТ1 ЛР Факт]
+//	VAR GroupHours = 
+//		SWITCH( --ALLSELECTED вызываю внутри calculate чтобы он 
+//			[_OpimsHierarchyLvl]; --действовал как REMOVEFILTERS
+//			"проект"; --в dax patterns предрасчитывают ALLSELECTED в var
+//				CALCULATE( 
+//					[ЕТ1 ЛР Факт]; 
+//					ALLSELECTED('проект');
+//					VALUES('опимс'[проект])
+//				); --таким образом он выступает в роли table filter
+//			"организация"; --в метрике [ЕТ1 ЛР Факт] стоит проверка на уровень просмотра отчета [_OPiMSBrowseDepth] <= [_OPiMSMaxNodeDepth]
+//				CALCULATE( 
+//					[ЕТ1 ЛР Факт]; 
+//					ALL('ет1');
+//					ALLSELECTED('организация')
+//				); --[_OPiMSBrowseDepth] считается через ISFILTERED
+//			"опимс ур1"; --если в аргумент calculate передать таблицу, ISFILTERED посчитает что она отфильтрована целиком и проверка пройдена не будет
+//				CALCULATE([ЕТ1 ЛР Факт]; ALLSELECTED('опимс')); --таким образом результаты будут скрыты 
+//			"опимс ур2"; --с ISINSCOPE такой проблемы нет, так как применятся другой алгоритм определения уровня группироки,
+//				CALCULATE( --но он не доступен в EXCEL
+//					[ЕТ1 ЛР Факт]; 
+//					ALLSELECTED('опимс'),
+//					VALUES('опимс'[опимс ур1 с ед изм])
+//				);
+//			"опимс ур3"; 
+//				CALCULATE(
+//					[ЕТ1 ЛР Факт]; 
+//					ALLSELECTED('опимс'),
+//					VALUES('опимс'[опимс ур1 с ед изм])
+//				)
+//		)
+//	VAR Result = DIVIDE(CurHours; GroupHours)
+//	RETURN Result
+
+
+////Ключевые
+MEASURE _Measures[Ключевые ЛР Факт] = SUM('ключевые часы'[часы факт])
+
+//Исправить методику расчета меры
+//MEASURE _Measures[Ключевые ЛР Факт % Группа] = 
+//	VAR CurHours = [Ключевые ЛР Факт]
+//	VAR GroupHours = 
+//		SWITCH(
+//			[_DailyReportHierarchy];
+//			"проект"; 
+//				CALCULATE( [Ключевые ЛР Факт]; ALLSELECTED('проект'));
+//			"организация"; 
+//				CALCULATE( [Ключевые ЛР Факт]; ALLSELECTED('организация'));
+//			"ключевые ур1"; 
+//				CALCULATE([Ключевые ЛР Факт]; ALLSELECTED('ключевые'));
+//			"ключевые ур2"; 
+//				CALCULATE(
+//					[Ключевые ЛР Факт]; 
+//					ALLSELECTED('ключевые');
+//					VALUES('ключевые'[ключевые ур1 с ед изм])
+//				)
+//		)
+//	VAR Result = DIVIDE(CurHours; GroupHours)
+//	RETURN Result
+			
+//Исправить методику расчета меры
+//MEASURE _Measures[Ключевые ЛР Факт ОПИМС] = 
+//	VAR EntityShowRow = [_DailyReportBrowseDepthOpims] <= [_DailyReportMaxNodeDepthOpims]
+//	VAR HoursTotal = SUM('ключевые часы'[часы факт])
+//	VAR HoursByOpimsLvl1 = 
+//		CALCULATE(
+//			SUM('ключевые часы'[часы факт]);
+//			CROSSFILTER('опимс'[ключевые ур1 с ед изм]; 'опимс_ключевые_ур1'[ключевые ур1 с ед изм]; BOTH)
+//		)
+//	VAR HoursByOpimsLvl2 = 
+//		CALCULATE(
+//			SUM('ключевые часы'[часы факт]);
+//			CROSSFILTER('опимс'[ключевые ур2 с ед изм]; 'опимс_ключевые_ур2'[ключевые ур2 с ед изм]; BOTH)
+//		)
+//	VAR Result = 
+//		IF(
+//			EntityShowRow;
+//			SWITCH(
+//				TRUE();
+//				ISFILTERED('опимс'[ключевые ур2 с ед изм]); HoursByOpimsLvl2;
+//				ISFILTERED('опимс'[ключевые ур1 с ед изм]); HoursByOpimsLvl1;
+//				HoursTotal
+//			)
+//		)		
+//	RETURN Result
+
+-----------------------------------------------------------------
+-----------------------------------------------------------------
+-----------------------------------------------------------------	
+
+
+-----------------------------------------------------------------
+-----------------------------------------------------------------
+-----------------------------------------------------------------
+//Ключевые	
+//MEASURE _Measures[_DailyReportMaxNodeDepth] = 
+//	MAX('ключевые'[ключевые макс уровень])
+		
+//MEASURE _Measures[_DailyReportMaxNodeDepthOpims] = 
+//	CALCULATE( 
+//			MAX('опимс'[ключевые макс уровень]);
+//			INTERSECT(ALL('опимс'[проект]); VALUES('проект'[проект]))
+//		)
+		
+//MEASURE _Measures[_DailyReportBrowseDepth] = 
+//	ISFILTERED('ключевые'[ключевые ур1 с ед изм]) +
+//	ISFILTERED('ключевые'[ключевые ур2 с ед изм])
+//
+//MEASURE _Measures[_DailyReportBrowseDepthOpims] = 
+//	ISFILTERED('опимс'[ключевые ур1 с ед изм]) +
+//	ISFILTERED('опимс'[ключевые ур2 с ед изм]) 
+
+MEASURE _Mesures[_DailyReportHierarchy] =
+	VAR IsLvl2 = ISFILTERED('ключевые'[ключевые ур2 с ед изм])
+	VAR IsLvl1 = ISFILTERED('ключевые'[ключевые ур1 с ед изм])
+	VAR IsSub = ISFILTERED('организация'[организация отчет])
+	VAR IsProject = ISFILTERED('проект'[проект отчет])
+	VAR Result = 
+		SWITCH(
+			TRUE();
+			IsLvl2; "ключевые ур2";
+			IsLvl1; "ключевые ур1";
+			IsSub; "организация";
+			IsProject; "проект";
+			"без фильтра"
+		)
+	RETURN Result
+-----------------------------------------------------------------
+-----------------------------------------------------------------
+-----------------------------------------------------------------
+//РКЦ
+MEASURE _Measures[РКЦ Ед Изм] = 
+	VAR IsAnyDataET =  NOT (  ISEMPTY( 'ет1' ) ) --проверяем наличие данных в ет1 
+//	VAR IsSingleUnit = HASONEVALUE( 'ркц'[ед изм] ) -- проверяем на единственность ед изм (пустоты считаются)
+//	VAR RkcUnit = DISTINCT( 'ркц'[ед изм] ) --список ед изм
+	VAR RkcUnitJoined = CONCATENATEX( RkcUnit; 'ркц'[ед изм]; ", "; 'ркц'[ед изм]; ASC ) --объединенные ед изм. в текст
+//	VAR RkcUnitSingle= IF( IsSingleUnit; RkcUnit) --показываем ед изм если она единственная
+//	VAR UnitScenario =
+//		SWITCH(
+//			[_ScenarioRkcUnit];
+//			1; RkcUnitJoined; --для сценария "все ед изм"
+//			2; RkcUnitSingle --для сценария "единственная ед изм"
+//		)
+//	VAR UnitScenarioStarted = IF( IsAnyDataET; UnitScenario ) --если в таблице ет1 есть данные выводим ед изм 
+	VAR UnitScenarioStarted = IF( IsAnyDataET; RkcUnitJoined ) --если в таблице ет1 есть данные выводим ед изм 
+	VAR ShowScenario =
+	    SWITCH(
+	        [_ScenarioRkcShow];
+	        1; RkcUnitJoined; --для сценария "показывать все позиции" выводим UnitScenario
+	        2; UnitScenarioStarted --для сценария "показывать начатые позиции" выподим UnitScenario когда в ет1 есть значения
+	    )
+	RETURN
+	    ShowScenario
+
+MEASURE _Measures[РКЦ Объем] = 
+	VAR FilterByStarted = SUMMARIZE('ет1'; 'ркц'[ркц поз суб]; 'ркц'[ркц поз ген])
+	VAR IsSingleUnit = HASONEVALUE( 'ркц'[ед изм] )
+	VAR RkcAmtAll = SUM ( 'ркц'[объем контракт] )
+	//получаем объем по ркц по начатым позициям из базы ет
+	VAR RkcAmtStarted = CALCULATE( SUM ( 'ркц'[объем контракт] ); FilterByStarted)
+	VAR ShowScenario =
+	    SWITCH(
+	        [_ScenarioRkcShow];
+	        1; RkcAmtAll; --для сценария "показывать все позиции"
+	        2; RkcAmtStarted --для сценария "показывать начатые позиции"
+	    )     
+	VAR RkcAmtSingle = IF(IsSingleUnit; ShowScenario)
+	VAR UnitScenario =
+		SWITCH(
+			[_ScenarioRkcUnit];
+			1; ShowScenario; --для сценария "все ед изм" выводим ShowScenario
+			2; RkcAmtSingle --для сценария "единственная ед изм" выводим ShowScenario если ед изм единственная
+		)
+	RETURN
+	    UnitScenario
+	    
+MEASURE _Measures[_РКЦ Стоимость Руб] = 
+	CALCULATE(
+		SUM('ркц'[стоимость руб]);
+		ALL('ркц'[ркц поз суб вед]);
+		ALL('ркц'[ркц поз ген вед])
+	)
+
+MEASURE _Measures[РКЦ Стоимость Руб] = 
+	VAR FilterByStarted = SUMMARIZE('ет1'; 'ркц'[ркц поз суб]; 'ркц'[ркц поз ген])
+	VAR RkcAmtAll = [_РКЦ Стоимость Руб]
+	VAR RkcAmtStarted = CALCULATE( [_РКЦ Стоимость Руб]; FilterByStarted)
+	VAR ShowScenario =
+	    SWITCH(
+	        [_ScenarioRkcShow];
+	        1; RkcAmtAll; --для сценария "показывать все позиции"
+	        2; RkcAmtStarted --для сценария "показывать начатые позиции"
+	    ) 
+	RETURN ShowScenario	    
+-----------------------------------------------------------------
+-----------------------------------------------------------------
+-----------------------------------------------------------------
+
+//Объем
+////ОПИМС
+//////ВМ
+MEASURE _Measures[ВМ Объем Факт ОПИМС] = 
+	CALCULATE (
+	    --Определяем факт. объем согласно
+	    --ведущим позициям указанным в справочнике опимс
+	    --для каждого уровня группировки опимс
+	    VAR OPiMS_Lvl0_Amt = 
+	             SUM ( 'вм'[объем факт] )
+	             
+		VAR OPiMS_Lvl1_Amt =
+	        CALCULATE (
+	             SUM ( 'вм'[объем факт] );
+	            'опимс'[опимс ур1 вед поз] <>""
+	        )
+	    VAR OPiMS_Lvl2_Amt =
+	        CALCULATE (
+	             SUM ( 'вм'[объем факт] );
+	             'опимс'[опимс ур2 вед поз] <>""
+	        )
+	    VAR OPiMS_Lvl3_Amt =
+	        CALCULATE (
+	             SUM ( 'вм'[объем факт] );
+	             'опимс'[опимс ур3 вед поз]  <>""
+	        )
+	    VAR Bp_Amt =
+	        CALCULATE (
+	             SUM ( 'вм'[объем факт] );
+	             'опимс'[бп вед поз] <>""
+	        )
+	    VAR OPiMS_Daily_Lvl1_Amt =
+	    	CALCULATE(
+	    		SUM ( 'вм'[объем факт] );
+	    		'опимс'[ключевые ур1 вед поз] <> ""
+	    	)
+	    VAR OPiMS_Daily_Lvl2_Amt =
+	    	CALCULATE(
+	    		SUM ( 'вм'[объем факт] );
+	    		'опимс'[ключевые ур2 вед поз] <> ""
+	    	)		
+	    VAR Result =
+	        SWITCH (
+	            [_OpimsHierarchyLvl];
+	            "опимс ур0"; OPiMS_Lvl0_Amt;
+	            "опимс ур1"; OPiMS_Lvl1_Amt;
+	            "опимс ур2"; OPiMS_Lvl2_Amt;
+	            "опимс ур3"; OPiMS_Lvl3_Amt;
+	            "бп"; Bp_Amt;
+	            "ключевые ур1"; OPiMS_Daily_Lvl1_Amt;
+	            "ключевые ур2"; OPiMS_Daily_Lvl2_Amt
+	        ) --выводим результат согласно текущему уровню просмотра отчета		
+	    RETURN
+	        Result;
+	    'вм'[опимс вед поз] <> "" --Условие на фильтрацию базы вм по кодам с объемом
+	)
+	
+//////ЕТ1
+MEASURE _Measures[ЕТ1 Объем Факт ОПИМС] = 
+	CALCULATE (
+	    --Определяем факт. объем согласно
+	    --ведущим позициям указанным в справочнике опимс
+	    --для каждого уровня группировки опимс
+	    VAR OPiMS_Lvl0_Amt = 
+	             SUM ( 'ет1'[объем факт] )
+	             
+		VAR OPiMS_Lvl1_Amt =
+	        CALCULATE (
+	             SUM ( 'ет1'[объем факт] );
+	            'опимс'[опимс ур1 вед поз] <>""
+	        )
+	    VAR OPiMS_Lvl2_Amt =
+	        CALCULATE (
+	             SUM ( 'ет1'[объем факт] );
+	             'опимс'[опимс ур2 вед поз] <>""
+	        )
+	    VAR OPiMS_Lvl3_Amt =
+	        CALCULATE (
+	             SUM ( 'ет1'[объем факт] );
+	             'опимс'[опимс ур3 вед поз]  <>""
+	        )
+	    VAR Bp_Amt =
+	        CALCULATE (
+	             SUM ( 'ет1'[объем факт] );
+	             'опимс'[бп вед поз] <>""
+	        )
+	    VAR OPiMS_Daily_Lvl1_Amt =
+	    	CALCULATE(
+	    		SUM ( 'ет1'[объем факт] );
+	    		'опимс'[ключевые ур1 вед поз] <> ""
+	    	)
+	    VAR OPiMS_Daily_Lvl2_Amt =
+	    	CALCULATE(
+	    		SUM ( 'ет1'[объем факт] );
+	    		'опимс'[ключевые ур2 вед поз] <> ""
+	    	)
+	    VAR Result =
+	        SWITCH (
+	            [_OpimsHierarchyLvl];
+	            "опимс ур0"; OPiMS_Lvl0_Amt;
+	            "опимс ур1"; OPiMS_Lvl1_Amt;
+	            "опимс ур2"; OPiMS_Lvl2_Amt;
+	            "опимс ур3"; OPiMS_Lvl3_Amt;
+	            "бп"; Bp_Amt;
+	            "ключевые ур1"; OPiMS_Daily_Lvl1_Amt;
+	            "ключевые ур2"; OPiMS_Daily_Lvl2_Amt
+	        ) --выводим результат согласно текущему уровню просмотра отчета		
+	    RETURN
+	        Result;
+	    'ркц'[опимс вед поз] <> ""; --Условие на фильтрацию базы ркц по кодам с объемом
+	    'ет1'[ркц вед поз] <> "" --Условие на фильтрацию базы ет1 по ведущей позиции
+	)
+	
+//////СМУ
+MEASURE _Measures[ЕТ1 Объем Факт ОПИМС] = CALCULATE (
+	    --Определяем факт. объем согласно
+	    --ведущим позициям указанным в справочнике опимс
+	    --для каждого уровня группировки опимс
+	    VAR OPiMS_Lvl0_Amt = 
+	             SUM ( 'сму'[объем факт] )
+	             
+		VAR OPiMS_Lvl1_Amt =
+	        CALCULATE (
+	             SUM ( 'сму'[объем факт] ),
+	            'опимс'[опимс ур1 вед поз] <>""
+	        )
+	    VAR OPiMS_Lvl2_Amt =
+	        CALCULATE (
+	             SUM ( 'сму'[объем факт] ),
+	             'опимс'[опимс ур2 вед поз] <>""
+	        )
+	    VAR OPiMS_Lvl3_Amt =
+	        CALCULATE (
+	             SUM ( 'сму'[объем факт] ),
+	             'опимс'[опимс ур3 вед поз]  <>""
+	        )
+	    VAR Bp_Amt =
+	        CALCULATE (
+	             SUM ( 'сму'[объем факт] ),
+	             'опимс'[бп вед поз] <>""
+	        )
+	    VAR OPiMS_Daily_Lvl1_Amt =
+	    	CALCULATE(
+	    		SUM ( 'сму'[объем факт] ),
+	    		'опимс'[ключевые ур1 вед поз] <> ""
+	    	)
+	    VAR OPiMS_Daily_Lvl2_Amt =
+	    	CALCULATE(
+	    		SUM ( 'сму'[объем факт] ),
+	    		'опимс'[ключевые ур2 вед поз] <> ""
+	    	)
+	    VAR Result =
+	        SWITCH (
+	            [_OpimsHierarchyLvl],
+	            "опимс ур0", OPiMS_Lvl0_Amt,
+	            "опимс ур1", OPiMS_Lvl1_Amt,
+	            "опимс ур2", OPiMS_Lvl2_Amt,
+	            "опимс ур3", OPiMS_Lvl3_Amt,
+	            "бп", Bp_Amt,
+	            "ключевые ур1", OPiMS_Daily_Lvl1_Amt,
+	            "ключевые ур2", OPiMS_Daily_Lvl2_Amt
+	        ) --выводим результат согласно текущему уровню просмотра отчета		
+	    RETURN
+	        Result,
+	    'сму'[опимс вед поз] <> "" --Условие на фильтрацию базы вм по кодам с объемом
+	)
+//////ВСЕ
+MEASURE _Measures[Все Объем Факт ОПИМС] = [ВМ Объем Факт ОПИМС] + [ЕТ1 Объем Факт ОПИМС] + [ЕТ1 Объем Факт ОПИМС]
+
+//////Ключевые
+MEASURE _Measures[Ключевые Объем Факт ОПИМС] = 
+	VAR EntityShowRow = [_DailyReportBrowseDepthOpims] <= [_DailyReportMaxNodeDepthOpims]
+	VAR AmtByOpimsLvl1 = 
+		CALCULATE(
+			SUM('ключевые объем'[объем факт]);
+			CROSSFILTER('опимс'[ключевые ур1 с ед изм]; 'опимс_ключевые_ур1'[ключевые ур1 с ед изм]; BOTH)
+		)
+	VAR AmtByOpimsLvl2 = 
+		CALCULATE(
+			SUM('ключевые объем'[объем факт]);
+			CROSSFILTER('опимс'[ключевые ур2 с ед изм]; 'опимс_ключевые_ур2'[ключевые ур2 с ед изм]; BOTH)
+		)
+	VAR Result = 
+		IF(
+			EntityShowRow;
+			SWITCH(
+				TRUE();
+				ISFILTERED('опимс'[ключевые ур2 с ед изм]); AmtByOpimsLvl2;
+				ISFILTERED('опимс'[ключевые ур1 с ед изм]); AmtByOpimsLvl1
+			)
+		)		
+	RETURN Result
+	
+////Ключевые
+MEASURE _Measures[Ключевые Объем Факт] = 
+	VAR EntityShowRow = [_DailyReportBrowseDepth] <= [_DailyReportMaxNodeDepth]
+	VAR Amt = SUM('ключевые объем'[объем факт])
+	VAR Result = IF(EntityShowRow;Amt)
+	RETURN Result
+	
+MEASURE _Measures[Ключевые Объем Факт % Группа] = 
+	VAR CurAmt = [Ключевые Объем Факт]
+	VAR GroupAmt = 
+		SWITCH(
+			[_DailyReportHierarchy];
+			"ключевые ур2"; 
+				CALCULATE(
+					[Ключевые Объем Факт]; 
+					ALLSELECTED('ключевые');
+					VALUES('ключевые'[ключевые ур1 с ед изм])
+				)
+		)
+	VAR Result = DIVIDE(CurAmt; GroupAmt)
+	RETURN Result
+	
+////СМУ Di
+MEASURE _Measures[ЕТ1 Объем Факт Di] = SUM('сму'[di сварено])
+
+MEASURE _Measures[ЕТ1 Объем Факт Di Монтаж] = 
+	CALCULATE(
+		[ЕТ1 Объем Факт Di];
+		'ет1'[цех монтаж] = "монтаж"
+	)
+	
+MEASURE _Measures[ЕТ1 Объем Факт Di Цех] = 
+	CALCULATE(
+		[ЕТ1 Объем Факт Di];
+		'ет1'[цех монтаж] = "Цех"
+	)
+	
+////РКЦ
+//////ЕТ1
+MEASURE _Measures[ЕТ1 Объем Факт РКЦ] = 
+	VAR IsSingleUnit = HASONEVALUE( 'ркц'[ед изм] )
+	VAR Amt = 
+		CALCULATE(
+			SUM('ет1'[объем факт]);
+			'ет1'[ркц вед поз] <> ""
+		) --считаем факт объем по ведущей позиции ркц
+	VAR AmtIfSingle = IF( IsSingleUnit; Amt)
+	VAR UnitScenario = 
+		SWITCH(
+			[_ScenarioRkcUnit];
+			1; Amt; --для сценария "все ед изм"
+			2; AmtIfSingle --для сценария "единственная ед изм"
+	    )  
+	RETURN
+	    UnitScenario
+	    
+MEASURE _Measures[ЕТ1 Объем Факт РКЦ Исх] = 
+	CALCULATE(
+			[ЕТ1 Объем Факт РКЦ];
+			'ет1'[корректировка маркер] = ""
+	)
+	
+MEASURE _Measures[ЕТ1 Объем Факт РКЦ Кор] = 
+	CALCULATE(
+		[ЕТ1 Объем Факт РКЦ];
+		'ет1'[корректировка маркер] <> ""
+	)
+	
+MEASURE _Measures[ЕТ1 Объем Факт РКЦ Кор Дата Кор] = 
+	CALCULATE(
+		[ЕТ1 Объем Факт РКЦ Кор]; --расчитываем объем корректировки
+		USERELATIONSHIP('календарь'[дата]; 'ет1'[корректировка дата]) --по дате внесения корректировки
+	)
+	
+MEASURE _Measures[ЕТ1 Объем Факт РКЦ RT] = 
+	VAR LastVisibleDate = MAX ( 'календарь'[дата] )
+	VAR FirstVisibleDate = MIN ( 'календарь'[дата] )
+	VAR LastDateWithWorks = CALCULATE ( MAX ( 'ет1'[дата] ); ALL('ет1') )
+	VAR FilterByStarted = SUMMARIZE('ет1'; 'ркц'[ркц поз суб]; 'ркц'[ркц поз ген])
+	VAR AmtRT = CALCULATE (
+	            [ЕТ1 Объем Факт РКЦ];
+	            'календарь'[дата] <= LastVisibleDate 
+	        )
+	VAR AmtRTStarted = CALCULATE (
+	            [ЕТ1 Объем Факт РКЦ];
+	            'календарь'[дата] <= LastVisibleDate;
+	            FilterByStarted
+	        )
+	VAR ShowScenario =
+	    SWITCH(
+	        [_ScenarioRkcShow];
+	        1; AmtRT; --для сценария "показывать все позиции"
+	        2; AmtRTStarted --для сценария "показывать начатые позиции"
+	    ) 
+	VAR Result =
+	    IF (
+	        FirstVisibleDate <= LastDateWithWorks;
+	        ShowScenario
+	    )
+	RETURN
+	    Result    
+    
+MEASURE _Measures[ЕТ1 Объем Факт РКЦ Весь Период] = 
+	VAR AmtAllDays = CALCULATE([ЕТ1 Объем Факт РКЦ]; ALL('календарь'[Дата]))
+	VAR FilterByStarted = SUMMARIZE('ет1'; 'ркц'[ркц поз суб]; 'ркц'[ркц поз ген])
+	VAR AmtAllDaysStarted = CALCULATE(
+								[ЕТ1 Объем Факт РКЦ]; 
+								ALL('календарь'[Дата]);
+								FilterByStarted
+							)
+	VAR ShowScenario =
+	    SWITCH(
+	        [_ScenarioRkcShow];
+	        1; AmtAllDays; --для сценария "показывать все позиции"
+	        2; AmtAllDaysStarted --для сценария "показывать начатые позиции"
+	    ) 
+	RETURN ShowScenario
+-----------------------------------------------------------------
+//Норма
+////ВМ
+//////ОПИМС
+MEASURE _Measures[ВМ Норма Контракт ОПИМС] = 
+	VAR ContractMh = [ВМ ЛР Контракт]
+	VAR WorkAmt = [ВМ Объем Факт ОПИМС]
+	VAR RateNoAdjustment = DIVIDE(ContractMh;WorkAmt)
+	VAR AdjustedAmt = CALCULATE(
+						[ВМ Объем Факт ОПИМС];
+						'вм'[норма контракт] <> 0 
+					  )
+	VAR AdjustedRate = DIVIDE(ContractMh; AdjustedAmt)
+	VAR SwithMeasure = SWITCH (
+			                [_ScenarioBmProjectHoursAdj];
+			                1; RateNoAdjustment;
+			                2; AdjustedRate
+	           			)
+	RETURN SwithMeasure
+
+MEASURE _Measures[ВМ Норма Факт ОПИМС] = DIVIDE([ЕТ1 ЛР Факт]; [ВМ Объем Факт ОПИМС])
+MEASURE _Measures[ВМ Норма Факт ТР ОПИМС] = DIVIDE([ВМ ТР Факт]; [ВМ Объем Факт ОПИМС])
+
+MEASURE _Measures[_ЕТ1 Норма Факт + Доп ОПИМС] = DIVIDE([_ЕТ1 ЛР Факт + Доп]; [ВМ Объем Факт ОПИМС])
+MEASURE _Measures[_ЕТ1 Норма Факт + Доп Р ОПИМС] = DIVIDE([_ЕТ1 ЛР Факт + Доп Р]; [ВМ Объем Факт ОПИМС])
+MEASURE _Measures[_ЕТ1 Норма Факт + Доп РП ОПИМС] = DIVIDE([_ЕТ1 ЛР Факт + Доп РП]; [ВМ Объем Факт ОПИМС])
+
+MEASURE _Measures[ВМ Норма Факт + Доп ОПИМС] = 
+	VAR SwitchMeasure =
+	    SWITCH (
+	        [_ScenarioExtraHoursAllocation];
+	        1; [_ЕТ1 Норма Факт + Доп ОПИМС];
+	        2; [_ЕТ1 Норма Факт + Доп Р ОПИМС];
+	        3; [_ЕТ1 Норма Факт + Доп РП ОПИМС]
+	    )
+		RETURN
+	    	SwitchMeasure
+////ЕТ1
+//////ОПИМС
+MEASURE _Measures[ЕТ1 Норма Факт ЛР ОПИМС] = DIVIDE([ЕТ1 ЛР Факт]; [ЕТ1 Объем Факт ОПИМС])
+MEASURE _Measures[ЕТ1 Норма Факт ТР ОПИМС] = DIVIDE([ЕТ1 ТР Факт]; [ЕТ1 Объем Факт ОПИМС])
+//////РКЦ
+MEASURE _Measures[ЕТ1 Норма Факт ЛР РКЦ] = DIVIDE([ЕТ1 ЛР Факт]; [ЕТ1 Объем Факт РКЦ])
+MEASURE _Measures[ЕТ1 Норма Факт ТР РКЦ] = DIVIDE([ЕТ1 ТР Факт]; [ЕТ1 Объем Факт РКЦ])
+////СМУ
+//////Di Сварщик
+MEASURE _Measures[ЕТ1 Норма Di/Сварщик Монтаж] = 
+	VAR Ratio = 3 * 10
+	VAR Performance = DIVIDE([ЕТ1 Объем Факт Di Монтаж]; [ЕТ1 ЛР Факт Монтаж])
+	VAR Result = Ratio * Performance
+	RETURN Result
+
+MEASURE _Measures[ЕТ1 Норма Di/Сварщик Монтаж + Прочие] = 
+	VAR Ratio = 3 * 10
+	VAR TotalHours = [ЕТ1 ЛР Факт]
+	VAR ShopHours = [ЕТ1 ЛР Факт Цех]
+	VAR FieldHours = [ЕТ1 ЛР Факт Монтаж]
+	VAR HydroHours = [ЕТ1 ЛР Факт ГИ]
+	VAR AllocationPct = DIVIDE(FieldHours; ShopHours + FieldHours)
+	VAR AllocatedAmt = AllocationPct * (TotalHours - ShopHours - FieldHours - HydroHours)
+	VAR TotalAmt = FieldHours + HydroHours + AllocatedAmt
+	VAR FieldDi = [ЕТ1 Объем Факт Di Монтаж]
+	VAR Performance = DIVIDE(FieldDi; TotalAmt)
+	VAR Result = Ratio * Performance
+	RETURN Result
+
+MEASURE _Measures[ЕТ1 Норма Di/Сварщик Цех] = 
+	VAR Ratio = 2,5 * 10
+	VAR Performance = DIVIDE([ЕТ1 Объем Факт Di Цех]; [ЕТ1 ЛР Факт Цех])
+	VAR Result = Ratio * Performance
+	RETURN Result
+
+MEASURE _Measures[ЕТ1 Норма Di/Сварщик Цех + Прочие] =
+	VAR Ratio = 2,5 * 10
+	VAR TotalHours = [ЕТ1 ЛР Факт]
+	VAR ShopHours = [ЕТ1 ЛР Факт Цех]
+	VAR FieldHours = [ЕТ1 ЛР Факт Монтаж]
+	VAR HydroHours = [ЕТ1 ЛР Факт ГИ]
+	VAR AllocationPct = DIVIDE(ShopHours; ShopHours + FieldHours)
+	VAR AllocatedAmt = AllocationPct * (TotalHours - ShopHours - FieldHours - HydroHours)
+	VAR TotalAmt = ShopHours + AllocatedAmt
+	VAR ShopDi = [ЕТ1 Объем Факт Di Цех]
+	VAR Performance = DIVIDE(ShopDi; TotalAmt)
+	VAR Result = Ratio * Performance
+	RETURN Result
+//////На Di
+MEASURE _Measures[ЕТ1 Норма Di Цех] = 
+	DIVIDE([ЕТ1 ЛР Факт Цех], [ЕТ1 Объем Факт Di Цех])
+
+MEASURE _Measures[ЕТ1 Норма Di Монтаж] =
+	DIVIDE([ЕТ1 ЛР Факт Монтаж], [ЕТ1 Объем Факт Di Монтаж])
+
+MEASURE _Measures[ЕТ1 Норма Di Цех + Прочие] = 
+	VAR TotalHours = [ЕТ1 ЛР Факт]
+	VAR ShopHours = [ЕТ1 ЛР Факт Цех]
+	VAR FieldHours = [ЕТ1 ЛР Факт Монтаж]
+	VAR HydroHours = [ЕТ1 ЛР Факт ГИ]
+	VAR AllocationPct = DIVIDE(ShopHours; ShopHours + FieldHours)
+	VAR AllocatedAmt = AllocationPct * (TotalHours - ShopHours - FieldHours - HydroHours)
+	VAR TotalAmt = ShopHours + AllocatedAmt
+	VAR ShopDi = [ЕТ1 Объем Факт Di Цех]
+	VAR Performance = DIVIDE(TotalAmt, ShopDi)
+	RETURN Performance
+
+MEASURE _Measures[ЕТ1 Норма Di Монтаж + Прочие] = 
+	VAR TotalHours = [ЕТ1 ЛР Факт]
+	VAR ShopHours = [ЕТ1 ЛР Факт Цех]
+	VAR FieldHours = [ЕТ1 ЛР Факт Монтаж]
+	VAR HydroHours = [ЕТ1 ЛР Факт ГИ]
+	VAR AllocationPct = DIVIDE(FieldHours; ShopHours + FieldHours)
+	VAR AllocatedAmt = AllocationPct * (TotalHours - ShopHours - FieldHours - HydroHours)
+	VAR TotalAmt = FieldHours + HydroHours + AllocatedAmt
+	VAR FieldDi = [ЕТ1 Объем Факт Di Монтаж]
+	VAR Performance = DIVIDE(TotalAmt, FieldDi)
+	RETURN Performance
+////Ключевые
+MEASURE _Measures[Ключевые Норма] = 
+	DIVIDE([Ключевые ЛР Факт]; [Ключевые Объем Факт])
+
+MEASURE _Measures[Ключевые Норма ОПИМС] = 
+	DIVIDE([Ключевые ЛР Факт ОПИМС]; [Ключевые Объем Факт ОПИМС])
+////ВСЕ
+//////ОПИМС
+MEASURE _Measures[Все Норма Факт ЛР ОПИМС] = DIVIDE([ЕТ1 ЛР Факт]; [Все Объем Факт ОПИМС])
+MEASURE _Measures[Все Норма Факт + Доп ОПИМС] = DIVIDE([ЕТ1 ЛР Факт + Доп]; [Все Объем Факт ОПИМС])
+-----------------------------------------------------------------
+//Дельта
+////ВСЕ
+MEASURE _Measures[Все ЛР Дельта Факт % Контракт] = 
+	IF(
+		HASONEVALUE('организация'[организация отчет]);
+		[ВМ ЛР Дельта Факт % Контракт]
+	)
+	
+MEASURE _Measures[Все ЛР Дельта Факт + Доп % Контракт] = 
+	IF(
+		HASONEVALUE('организация'[организация отчет]);
+		[ВМ ЛР Дельта Факт + Доп % Контракт]
+	)
+MEASURE _Measures[Все ЛР Доп % Факт] = 
+	IF(
+		HASONEVALUE('организация'[организация отчет]);
+		[ВМ ЛР Доп % Факт]
+	)
+	
+////ВМ
+//////ЛР
+MEASURE _Measures[ВМ ЛР Дельта Факт - Контракт] = 
+	VAR Delta = [ЕТ1 ЛР Факт] - [ВМ ЛР Контракт]
+	RETURN
+	IF(
+		NOT(ISBLANK([ВМ ЛР Контракт]))
+			&& NOT(ISBLANK([ЕТ1 ЛР Факт]));
+			Delta
+	)
+
+MEASURE _Measures[ВМ ЛР Дельта Факт + Доп - Контракт] = 
+	VAR Delta = [ЕТ1 ЛР Факт + Доп] - [ВМ ЛР Контракт]
+	RETURN
+	IF(
+		NOT(ISBLANK([ВМ ЛР Контракт]))
+			&& NOT(ISBLANK([ЕТ1 ЛР Факт + Доп]));
+			Delta
+	)
+	
+MEASURE _Measures[ВМ ЛР Дельта Факт % Контракт] = 
+	DIVIDE([ВМ ЛР Дельта Факт - Контракт];[ВМ ЛР Контракт])
+	
+MEASURE _Measures[ВМ ЛР Дельта Факт + Доп % Контракт] = 
+	DIVIDE([ВМ ЛР Дельта Факт + Доп - Контракт];[ВМ ЛР Контракт])
+	
+MEASURE _Measures[ВМ ЛР Доп % Факт] = 
+	DIVIDE([ЕТ1 ЛР Доп]; [ЕТ1 ЛР Факт])
+	
+//////Норма
+MEASURE _Measures[ВМ Норма Дельта Факт - Контракт ОПИМС] = 
+	VAR Delta = [ВМ Норма Факт ОПИМС] - [ВМ Норма Контракт ОПИМС]
+	RETURN
+	IF(
+		NOT(ISBLANK([ВМ Норма Факт ОПИМС])) && NOT(ISBLANK([ВМ Норма Контракт ОПИМС]));
+		Delta
+	)
+
+MEASURE _Measures[ВМ Норма Дельта Факт + Доп - Контракт ОПИМС] = 
+	VAR Delta = [ВМ Норма Факт + Доп ОПИМС] - [ВМ Норма Контракт ОПИМС]
+	RETURN
+	IF(
+		NOT(ISBLANK([ВМ Норма Факт + Доп ОПИМС])) && NOT(ISBLANK([ВМ Норма Контракт ОПИМС]));
+		Delta
+	)
+
+MEASURE _Measures[ВМ Норма Дельта Факт % Контракт ОПИМС] = 
+	DIVIDE([ВМ Норма Дельта Факт - Контракт ОПИМС]; [ВМ Норма Контракт ОПИМС])	
+	
+MEASURE _Measures[ВМ Норма Дельта Факт + Доп % Контракт ОПИМС] = 
+	VAR ContractRate = [ВМ Норма Контракт ОПИМС]
+	VAR Delta = [ВМ Норма Дельта Факт + Доп - Контракт ОПИМС]
+	VAR Pct = DIVIDE(Delta; ContractRate)
+	RETURN
+	    Pct
+////ЕТ1
+//////ЛР
+MEASURE _Measures[_ЕТ1 ЛР Факт Дельта Всего - Рабочая Единица] = [_ЕТ1 ЛР Факт Всего] - [_ЕТ1 ЛР Факт Рабочая Единица]
+MEASURE _Measures[_ЕТ1 ТР Факт Дельта Всего - Рабочая Единица] = [_ЕТ1 ТР Факт Всего] - [_ЕТ1 ТР Факт Рабочая Единица]
+//////Объем
+MEASURE _Measures[ЕТ1 Объем Факт РКЦ Кор % Исх] = DIVIDE([ЕТ1 Объем Факт РКЦ Кор]; [ЕТ1 Объем Факт РКЦ Исх])
+MEASURE _Measures[ЕТ1 Объем Факт Весь Период % РКЦ] = DIVIDE([ЕТ1 Объем Факт РКЦ Весь Период]; [РКЦ Объем])
+////Ключевые
+//////ЛР
+MEASURE _Measures[Ключевые ЛР Дельта Факт - Все ОПИМС] = 
+	VAR Delta = [Ключевые ЛР Факт ОПИМС] - [ЕТ1 ЛР Факт]
+	RETURN
+	IF(
+		NOT(ISBLANK([Ключевые ЛР Факт ОПИМС])) && NOT(ISBLANK([ЕТ1 ЛР Факт]));
+		Delta
+	)
+
+MEASURE _Measures[Ключевые ЛР Дельта Факт - Все ОПИМС + Доп] = 
+	VAR Delta = [Ключевые ЛР Факт ОПИМС] - [ЕТ1 ЛР Факт + Доп]
+	RETURN
+	IF(
+		NOT(ISBLANK([Ключевые ЛР Факт ОПИМС])) && NOT(ISBLANK([ЕТ1 ЛР Факт + Доп]));
+		Delta
+	)
+
+MEASURE _Measures[Ключевые ЛР Дельта Факт % Все ОПИМС] = 
+	DIVIDE([Ключевые ЛР Дельта Факт - Все ОПИМС]; [ЕТ1 ЛР Факт])
+
+MEASURE _Measures[Ключевые ЛР Дельта Факт % Все ОПИМС + Доп] = 
+	DIVIDE([Ключевые ЛР Дельта Факт - Все ОПИМС + Доп]; [ЕТ1 ЛР Факт + Доп])
+//////Объем
+MEASURE _Measures[Ключевые Объем Дельта Факт - Все ОПИМС] = 
+	VAR Delta = [Ключевые Объем Факт ОПИМС] - [Все Объем Факт ОПИМС]
+	RETURN
+	IF(
+		NOT(ISBLANK([Ключевые Объем Факт ОПИМС])) && NOT(ISBLANK([Все Объем Факт ОПИМС]));
+		Delta
+	)
+MEASURE _Measures[Ключевые Объем Дельта Факт % Все ОПИМС] = 
+	DIVIDE([Ключевые Объем Дельта Факт - Все ОПИМС]; [Все Объем Факт ОПИМС])
+	
+////СМУ
+//////ЛР
+MEASURE _Measures[ЕТ1 Дельта ЛР Факт - Контракт] = 
+	VAR ProjectHours = [ЕТ1 ЛР Контракт]
+	VAR ActualHours = [ЕТ1 ЛР Факт]
+	VAR Delta = ActualHours - ProjectHours
+	RETURN
+	IF(
+		NOT(ISBLANK(ActualHours))
+			&& NOT(ISBLANK(ProjectHours));
+			Delta
+		)
+MEASURE _Measures[ЕТ1 Дельта ЛР Факт % Контракт] = 
+	DIVIDE([ЕТ1 Дельта ЛР Факт - Контракт]; [ЕТ1 ЛР Контракт])
+MEASURE _Measures[ЕТ1 ЛР Кор % Исх] = 
+	VAR DailyAmt = [ЕТ1 ЛР Факт Исх]
+	VAR AdjAmt = [ЕТ1 ЛР Факт Кор]
+	VAR Pct = DIVIDE(AdjAmt; DailyAmt)
+	VAR Result = 
+		IF(
+			(AdjAmt > 0) && (DailyAmt = 0);
+			1;
+			Pct
+		)
+	RETURN Result
+	
+MEASURE _Measures[ЕТ1 ЛР Факт % Все Трузатраты Классификатор] = VAR Nominator = [ЕТ1 ЛР Факт]
+	VAR Denominator = 
+		CALCULATE(
+			[ЕТ1 ЛР Факт];
+			ALLSELECTED('трудозатраты категория');
+			ALLSELECTED('классификатор')
+		)
+	VAR Result = DIVIDE(Nominator; Denominator)
+	RETURN Result
+	
+
+MEASURE _Measures[ЕТ1 ЛР Факт % Кл1 Контракт] = 
+	VAR Cond = {"1.1"; "1.1 (по заявке)"}
+	VAR CurrentAmt = [ЕТ1 ЛР Факт]
+	VAR ProjectAmt = 
+		CALCULATE(
+			[ЕТ1 ЛР Контракт];
+			ALL('классификатор');
+			'классификатор'[классификатор] IN Cond 
+		)
+	VAR Result = DIVIDE(CurrentAmt; ProjectAmt)
+	RETURN Result
+
+MEASURE _Measures[ЕТ1 ЛР Факт % Кл1 Факт] = 
+	VAR Cond = {"1.1" ;"1.1 (по заявке)"}
+	VAR CurrentAmt = [ЕТ1 ЛР Факт]
+	VAR CondAmt = 
+		CALCULATE(
+			[ЕТ1 ЛР Факт];
+			ALL('классификатор');
+			'классификатор'[классификатор] IN Cond 
+		)
+	VAR Result = DIVIDE(CurrentAmt; CondAmt)
+	RETURN Result
+
+MEASURE _Measures[ЕТ1 ЛР Факт % Основные Контракт] = 
+	VAR Cond = "Основные работы"
+	VAR CurrentAmt = [ЕТ1 ЛР Факт]
+	VAR ParrentAmt = 
+		CALCULATE(
+			[ЕТ1 ЛР Контракт];
+			ALL('трудозатраты категория');
+			'трудозатраты категория'[трудозатраты группа] = Cond 
+		)
+	VAR Pct = DIVIDE(CurrentAmt; ParrentAmt)
+	RETURN Pct
+	
+MEASURE _Measures[ЕТ1 ЛР Факт % Основные Факт] =
+	VAR Cond = "Основные работы"
+	VAR CurrentAmt = [ЕТ1 ЛР Факт]
+	VAR ParrentAmt = 
+		CALCULATE(
+			[ЕТ1 ЛР Факт];
+			ALL('трудозатраты категория');
+			'трудозатраты категория'[трудозатраты группа] = Cond 
+		)
+	VAR Pct = DIVIDE(CurrentAmt; ParrentAmt)
+	RETURN Pct
+//Стоимость
+////ЕТ1
+MEASURE _Measures[ЕТ1 Стоимость Руб] = 
+	CALCULATE(
+		SUMX(
+			'ркц';
+			VAR Amt = [ЕТ1 Объем Факт РКЦ]
+			VAR Price = 'ркц'[цена руб]
+			VAR Result = Amt * Price
+			RETURN Result
+		);
+		ALL('ркц'[ркц поз суб вед]);
+		ALL('ркц'[ркц поз ген вед])
+	)	
+////СМУ
+MEASURE _Measures[ЕТ1 Стоимость Контракт Руб] = 
+	SUM('сму'[стоимость контракт руб]);
+----------------------------------------------
+----------------------------------------------
+//ТЕСТ
+EVALUATE
+	SUMMARIZECOLUMNS(
+		ROLLUPADDISSUBTOTAL(
+			'проект'[проект отчет]; "проект total"
+			;'организация'[организация отчет]; "организация total"
+			;'опимс'[опимс ур1 с ед изм]; "опимс ур1 total"
+//			;'опимс'[опимс ур2 с ед изм]; "опимс ур2 total"
+//			;'опимс'[опимс ур3 с ед изм]; "опимс ур3 total"
+		)
+		;"@ВМ ЛР Доп";[_ЕТ1 ЛР Доп]
+	)
+ORDER BY 'проект'[проект отчет]; 'организация'[организация отчет]; 'опимс'[опимс ур1 с ед изм]
+

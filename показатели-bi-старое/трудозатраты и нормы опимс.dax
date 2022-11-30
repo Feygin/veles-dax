@@ -1,0 +1,98 @@
+﻿DEFINE 
+//объем
+MEASURE 'нормы опимс'[объем факт ет1 опимс] = 
+	IF(
+		HASONEVALUE('опимс ур1 показатель'[опимс ур1 с ед изм]),
+		SUM('нормы опимс'[объем факт])
+	)
+//часы
+MEASURE 'нормы опимс'[часы факт ет1 опимс] = SUM('нормы опимс'[часы факт])
+MEASURE 'нормы опимс'[часы контракт ет1 опимс] = SUM('нормы опимс'[часы контракт])
+MEASURE 'нормы опимс'[часы доп ет1 опимс] = SUM('нормы опимс'[часы доп])
+MEASURE 'нормы опимс'[часы факт + доп ет1 опимс] = 
+	VAR ActualHours = [часы факт ет1 опимс]
+	VAR ExtraHours = [часы доп ет1 опимс]
+	VAR TotalHours = ActualHours + ExtraHours
+	VAR Result = 
+		IF(
+			NOT(ISBLANK(ActualHours))
+				&& NOT(ISBLANK(ExtraHours)),
+			TotalHours
+		)
+	RETURN Result
+//дельта часов
+MEASURE 'нормы опимс'[% доп часов от факта ет1 опимс] = DIVIDE([часы доп ет1 опимс], [часы факт ет1 опимс])
+MEASURE 'нормы опимс'[превышение факт часов над контрактом ет1 опимс] = 
+	VAR ContractHours = [часы контракт ет1 опимс]
+	VAR ActualHours = [часы факт ет1 опимс]
+	VAR Pct = DIVIDE(ActualHours - ContractHours, ContractHours)
+	VAR Result = 
+		IF(
+			NOT(ISBLANK(ActualHours))
+				&& NOT(ISBLANK(ContractHours)),
+			Pct
+		)
+	RETURN Result	
+MEASURE 'нормы опимс'[превышение факт часов + доп над контрактом ет1 опимс] = 
+	VAR ContractHours = [часы контракт ет1 опимс]
+	VAR ActualHours = [часы факт + доп ет1 опимс]
+	VAR Pct = DIVIDE(ActualHours - ContractHours, ContractHours)
+	VAR Result = 
+		IF(
+			NOT(ISBLANK(ActualHours))
+				&& NOT(ISBLANK(ContractHours)),
+			Pct
+		)
+	RETURN Result
+
+MEASURE 'нормы опимс'[норма контракт ет1 опимс] = DIVIDE([часы контракт ет1 опимс], [объем факт ет1 опимс])
+MEASURE 'нормы опимс'[норма факт ет1 опимс] = DIVIDE([часы факт ет1 опимс], [объем факт ет1 опимс])
+MEASURE 'нормы опимс'[норма факт + доп ет1 опимс] = DIVIDE([часы факт + доп ет1 опимс], [объем факт ет1 опимс])
+
+
+	
+//deprecated
+//медиана
+/*
+	MEASURE 'нормы опимс'[Δ часы факт % контракт ет1 опимс] = //исправить
+		VAR ProjectWithDelta =
+			ADDCOLUMNS(
+				VALUES('проект'[проект]),
+				"@difference",
+				VAR ContractHours = [часы контракт ет1 опимс]
+				VAR ActualHours = [часы факт ет1 опимс]
+				VAR Pct = DIVIDE(ActualHours - ContractHours, ContractHours)
+				VAR Result = 
+					IF(
+						NOT(ISBLANK(ActualHours))
+							&& NOT(ISBLANK(ContractHours)),
+						Pct
+					)
+				RETURN Result
+			)
+		VAR FilterNulls = FILTER(ProjectWithDelta, [@difference] <> 0)
+		VAR GetAbsValue = ADDCOLUMNS(FilterNulls, "@AbsDifference", ABS([@difference]) )
+		VAR GetMedianValue = MEDIANX( GetAbsValue, [@AbsDifference] )
+		VAR Result =
+			IF(
+				HASONEVALUE('проект'[проект]),
+				SELECTCOLUMNS(ProjectWithDelta, "@difference", [@difference]),
+				GetMedianValue
+			)
+	    RETURN Result
+	MEASURE 'нормы опимс'[% доп часов от факта по ет1 опимс] = 
+		VAR ProjectWithDelta =
+			ADDCOLUMNS(
+				VALUES('проект'[проект]),
+				"@pct", DIVIDE([часы доп ет1 опимс], [часы контракт ет1 опимс])
+			)
+		VAR Result =
+			MEDIANX(
+				FILTER(
+					ProjectWithDelta,
+					[@pct] <> 0 
+				),
+				[@pct]
+			)
+		RETURN Result 
+*/

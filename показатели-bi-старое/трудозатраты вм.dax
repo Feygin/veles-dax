@@ -1,0 +1,106 @@
+﻿DEFINE 
+//данные вм
+MEASURE 'трудозатраты вм'[часы 1н] = SUM('трудозатраты вм'[часы 1н вм]) //[часы 1н]
+MEASURE 'трудозатраты вм'[часы 1к] = SUM('трудозатраты вм'[часы 1к вм]) 
+//из базы доп часов
+MEASURE 'трудозатраты вм'[доп часы] = SUM('трудозатраты вм'[часы доп вм]) //[часы доп]
+MEASURE 'трудозатраты вм'[часы 1н + доп] = //[часы 1н + доп]
+	VAR ProjectHours = [часы 1н]
+    VAR ExtraHours = [доп часы]
+    VAR TotalHours = ProjectHours + ExtraHours
+    VAR Result =
+    	IF(
+    		NOT(ISBLANK(ProjectHours))
+    			&& NOT(ISBLANK(ExtraHours)),
+    			TotalHours
+    	)
+    RETURN Result
+MEASURE 'трудозатраты вм'[часы 1к + доп] = 
+	VAR ActualHours = [часы 1к]
+    VAR ExtraHours = [доп часы]
+    VAR TotalHours = ActualHours + ExtraHours
+    VAR Result =
+    	IF(
+    		NOT(ISBLANK(ActualHours))
+    			&& NOT(ISBLANK(ExtraHours)),
+    			TotalHours
+    	)
+    RETURN Result
+
+
+//данные модели
+MEASURE 'трудозатраты вм'[часы факт ет1] = SUM('трудозатраты вм'[часы факт вм]) //[часы факт модель]
+MEASURE 'трудозатраты вм'[часы факт ет1 + доп] = //[часы факт модель + доп]
+    VAR ActualHours = [часы факт ет1]
+	VAR ExtraHours = [доп часы]
+	VAR Total = ActualHours + ExtraHours
+	VAR Result = 
+		IF(
+			NOT(ISBLANK(ActualHours))
+				&& NOT(ISBLANK(ExtraHours)),
+			Total
+		)
+	RETURN Result
+MEASURE 'трудозатраты вм'[часы контракт ет1] = SUM('трудозатраты вм'[часы контракт вм] ) //[часы контракт модель]
+MEASURE 'трудозатраты вм'[часы контракт ет1 + доп] = //[часы контракт модель + доп]
+	VAR ProjectHours = [часы контракт ет1]
+    VAR ExtraHours = [доп часы]
+    VAR TotalHours = ProjectHours + ExtraHours
+    VAR Result =
+    	IF(
+    		NOT(ISBLANK(ProjectHours))
+    			&& NOT(ISBLANK(ExtraHours)),
+    			TotalHours
+    	)
+    RETURN Result
+//% доп часов от факта
+MEASURE 'трудозатраты вм'[% доп часов от факта ет1] = DIVIDE([доп часы], [часы факт ет1]) //[часы доп % факт модель]
+MEASURE 'трудозатраты вм'[% доп часов от 1к] = DIVIDE( [доп часы], [часы 1к] ) //[часы доп % 1к]
+	
+//превышение факта над контрактом
+MEASURE 'трудозатраты вм'[превышение 1к над 1н*]  = //[Δ часы табель % 1н + доп] 
+	VAR ActualHours = [часы 1к + доп]
+	VAR TotalProjectHours = [часы 1н + доп]
+    VAR Difference = DIVIDE( ActualHours - TotalProjectHours, TotalProjectHours )
+    VAR Result = 
+        IF( 
+            NOT( ISBLANK(ActualHours) ) && NOT( ISBLANK(TotalProjectHours) ),
+            Difference
+        )
+    RETURN Result		        
+MEASURE 'трудозатраты вм'[превышение факта над контратом ет1*] = //[Δчасы факт + доп % контрат + доп]
+	VAR ActualHours = [часы факт ет1 + доп]
+    VAR ProjectHours = [часы контракт ет1 + доп]
+    VAR Difference = DIVIDE( ActualHours - ProjectHours, ProjectHours )
+    VAR Result = 
+        IF( 
+            NOT( ISBLANK(ActualHours) ) && NOT( ISBLANK(ProjectHours) ),
+            Difference
+        )
+    RETURN 
+        Result
+//сравнение данных вм и модели
+MEASURE 'трудозатраты вм'[превышение 1к над фактом ет1] = //[Δ часы табель % факт + доп] 
+	VAR TimeSheetHours = [часы 1к]
+    VAR ActualHours = [часы факт ет1]
+    VAR Difference = DIVIDE( TimeSheetHours - ActualHours, ActualHours )
+    VAR Result = 
+        IF( 
+            NOT( ISBLANK(TimeSheetHours) ) && NOT( ISBLANK(ActualHours) ),
+            Difference
+        )
+    RETURN
+        Result
+MEASURE 'трудозатраты вм'[превышение 1н над контрактом ет1] = //[Δ часы 1н % контракт модель]
+	VAR TimeSheetHours = [часы 1н]
+    VAR ActualHours = [часы контракт ет1]
+    VAR Difference = DIVIDE( TimeSheetHours - ActualHours, ActualHours )
+    VAR Result = 
+        IF( 
+            NOT( ISBLANK(TimeSheetHours) ) && NOT( ISBLANK(ActualHours) ),
+            Difference
+        )
+    RETURN
+        Result
+ 
+

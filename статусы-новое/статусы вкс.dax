@@ -1,0 +1,65 @@
+﻿ DEFINE 
+MEASURE 'статус вкс'[кол-во вкс] = COUNTROWS('статус вкс')
+
+MEASURE 'статус вкс'[кол-во вкс передано на проверку] = 
+	VAR _amt = 
+		CALCULATE( 
+			[кол-во вкс],
+			'статус вкс'[передан на проверку] <> BLANK()
+		)
+	VAR _zero_condition = NOT(ISBLANK([кол-во вкс])) && ISBLANK(_amt)
+	VAR _result = IF(_zero_condition,0,_amt)
+	RETURN _result
+
+MEASURE 'статус вкс'[список вкс не передано на проверку] = 
+	VAR _values = 
+		CALCULATETABLE(
+			VALUES('статус вкс'[объект]),
+			'статус вкс'[передан на проверку] = BLANK()
+		)
+	VAR _values_to_text = 
+		CONCATENATEX(
+			_values, 
+			'статус вкс'[объект],
+			"; ",
+			'статус вкс'[объект]
+		)		
+	RETURN _values_to_text
+	
+MEASURE 'статус вкс'[кол-во вкс выдано замечаний] = 
+	CALCULATE( 
+		[кол-во вкс],
+		'статус вкс'[выданы замечания] <> BLANK(),
+		'статус вкс'[согласован] = BLANK()
+	)
+	
+MEASURE 'статус вкс'[кол-во вкс согласовано] = 
+	VAR _amt = 
+		CALCULATE( 
+			[кол-во вкс],
+			'статус вкс'[согласован] <> BLANK()
+		)
+	VAR _zero_condition = NOT(ISBLANK([кол-во вкс])) && ISBLANK(_amt)
+	VAR _result = IF(_zero_condition,0,_amt)
+	RETURN _result
+	
+MEASURE 'статус вкс'[кол-во вкс подписано] = 
+	vAR _amt = 
+		CALCULATE( 
+			[кол-во вкс],
+			'статус вкс'[подписан] <> BLANK()
+		)
+	VAR _zero_condition = NOT(ISBLANK([кол-во вкс])) && ISBLANK(_amt)
+	VAR _result = IF(_zero_condition,0,_amt)
+	RETURN _result
+MEASURE 'статус вкс'[% вкс передано на проверку] = DIVIDE( [кол-во вкс передано на проверку], [кол-во вкс] )
+MEASURE 'статус вкс'[% вкс выдано замечаний] = DIVIDE( [кол-во вкс выдано замечаний], [кол-во вкс] )
+MEASURE 'статус вкс'[% вкс согласовано] = DIVIDE( [кол-во вкс согласовано], [кол-во вкс] )
+MEASURE 'статус вкс'[% вкс подписано] = DIVIDE( [кол-во вкс подписано], [кол-во вкс] )
+MEASURE 'статус вкс'[вкс дата актуализации] =
+//	VAR _min_date = MIN('статус вкс'[дата актуализации])
+	VAR _max_date = MAX('статус вкс'[дата актуализации])
+//	VAR _concatenate_date = 
+//		FORMAT(_min_date, "DD MM YYYY") & 
+//		" - " & FORMAT(_max_date, "DD MM YYYY")
+	RETURN _max_date

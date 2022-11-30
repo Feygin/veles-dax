@@ -1,0 +1,37 @@
+﻿DEFINE 
+
+MEASURE 'справочник баз'[кол-во баз и моделей] = SUM('справочник баз'[требование значение])
+
+MEASURE 'справочник баз'[кол-во баз] = 
+	CALCULATE(
+		[кол-во баз и моделей],	
+		KEEPFILTERS('справочник баз'[база] <> "модель")
+	)
+MEASURE 'справочник баз'[кол-во моделей] = 
+	CALCULATE(
+		[кол-во баз и моделей],	
+		KEEPFILTERS('справочник баз'[база] = "модель")
+	)
+
+MEASURE 'статус баз'[% готовности баз] = 
+    VAR AllAmt = [кол-во баз]
+	VAR Done = 
+		CALCULATE(
+			SUM('статус баз'[готовность значение]),
+			KEEPFILTERS('справочник баз'[база] <> "модель")
+		)
+	VAR PctDone = DIVIDE(Done, AllAmt)
+	RETURN PctDone
+
+MEASURE 'статус баз'[% готовности моделей] = 
+	VAR AllAmt = [кол-во моделей]
+	VAR Done = 
+		CALCULATE(
+			SUM('статус баз'[готовность значение]),
+			KEEPFILTERS('справочник баз'[база] = "модель")
+		)
+	VAR PctDone = DIVIDE(Done, AllAmt)
+	RETURN PctDone
+
+
+

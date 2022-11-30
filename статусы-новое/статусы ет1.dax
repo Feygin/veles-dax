@@ -1,0 +1,38 @@
+﻿ DEFINE 
+
+MEASURE 'статус ет1'[кол-во ет1] = COUNTROWS('статус ет1')
+MEASURE 'статус ет1'[кол-во ет1 получено] = 
+	VAR _amt = 
+		CALCULATE( 
+		[кол-во ет1],
+		'статус ет1'[получен] <> BLANK()
+	)
+	VAR _zero_condition = NOT(ISBLANK([кол-во ет1])) && ISBLANK(_amt)
+	VAR _result = IF(_zero_condition,0,_amt)
+	RETURN _result
+	
+MEASURE 'статус ет1'[кол-во ет1 согласовано] = 
+	VAR _amt = 
+		CALCULATE( 
+			[кол-во ет1],
+			'статус ет1'[согласован] <> BLANK()
+		)
+	VAR _zero_condition = NOT(ISBLANK([кол-во ет1])) && ISBLANK(_amt)
+	VAR _result = IF(_zero_condition,0,_amt)
+	RETURN _result
+	
+MEASURE 'статус ет1'[% ет1 получено] = DIVIDE( [кол-во ет1 получено], [кол-во ет1] )
+MEASURE 'статус ет1'[% ет1 согласовано] = DIVIDE( [кол-во ет1 согласовано], [кол-во ет1] )
+MEASURE 'статус ет1'[% ет1 согласовано 3 декада] = CALCULATE([% ет1 согласовано], KEEPFILTERS('календарь'[декада] = "3 декада"))
+MEASURE 'статус ет1'[ет1 дата актуализации] =
+//	VAR _min_date = MIN('статус ет1'[дата актуализации])
+	VAR _max_date = MAX('статус ет1'[дата актуализации])
+//	VAR _concatenate_date = 
+//		FORMAT(_min_date, "DD MM YYYY") & 
+//		" - " & FORMAT(_max_date, "DD MM YYYY")
+	RETURN _max_date
+MEASURE 'статус ет1'[ет1 примечание] = 
+	IF(
+		ISINSCOPE('статус ет1'[журнал имя]),
+		SELECTEDVALUE('статус ет1'[примечание])
+	)

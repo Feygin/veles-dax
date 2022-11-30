@@ -1,0 +1,37 @@
+﻿
+MEASURE 'статус ет1'[маркер влр передано по договору] =
+	VAR _vks_contracts = SUMMARIZE('статус вкс', 'договор'[договор])
+	VAR _add_status = ADDCOLUMNS( _vks_contracts, "@статус", [% влр передано на проверку])
+	VAR _filter_not_done = FILTER(_add_status, [@статус] < 1)
+	VAR _result = IF(ISEMPTY(_filter_not_done), 1, 0)
+	RETURN _result
+
+EVALUATE
+CALCULATETABLE(
+	VAR _vks_contracts = SUMMARIZE('статус вкс', 'договор'[объект])
+	VAR _add_status = ADDCOLUMNS( _vks_contracts, "@статус", [% влр передано на проверку])
+	VAR _filter_not_done = FILTER(_add_status, [@статус] < 1)
+	VAR _result = {IF(ISEMPTY(_filter_not_done), 1, 0)}
+	RETURN _result,
+	'организация'[организация 1с] IN {"ВелесстройМонтаж ООО"},
+	'календарь'[месяц год] = "Мар 2022",
+	'проект'[проект 1с] = "Новый Уренгой - ВЗиС"
+)
+ORDER BY 'договор'[объект], 'договор'[договор]
+
+MEASURE 'статус ет1'[% ет1 согласовано по вкс] = 
+	CALCULATE(
+		[% ет1 согласовано], 
+		KEEPFILTERS('календарь'[декада], "3 декада"),
+		SUMMARIZE('статус вкс', 'договор'[договор])
+	)
+MEASURE 'статус влр'[% влр передано на проверку по вкс] = 
+	CALCULATE(
+		[% влр передано на проверку], 
+		SUMMARIZE('статус вкс', 'договор'[договор])
+	)
+MEASURE 'статус влр'[% влр подписано оп по вкс] = 
+	CALCULATE(
+		[% влр подписано оп], 
+		SUMMARIZE('статус вкс', 'договор'[договор])
+	)

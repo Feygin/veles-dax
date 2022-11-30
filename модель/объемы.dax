@@ -1,0 +1,71 @@
+﻿MEASURE _measures[контракт объем типовые] = 
+	VAR _entity_show_row = [_tipovie_browse_depth] <= [_tipovie_row_depth]
+	VAR _amt = 
+		CALCULATE (
+		    VAR _tipovie_lvl4_Amt = SUM ( 'контракт'[объем] )
+		    VAR _tipovie_lvl3_Amt = CALCULATE ( SUM ( 'контракт'[объем] ); 'типовые'[типовые ур3 вед поз] <>"")
+		    VAR _tipovie_lvl2_Amt = CALCULATE ( SUM ( 'контракт'[объем] ); 'типовые'[типовые ур2 вед поз] <>"")
+			VAR _tipovie_lvl1_Amt = CALCULATE ( SUM ( 'контракт'[объем] ); 'типовые'[типовые ур1 вед поз] <>"")
+			VAR _tipovie_lvl0_Amt = CALCULATE ( SUM ( 'контракт'[объем] ); 'типовые'[типовые ур0 вед поз] <>"")
+		    VAR _result =
+		        SWITCH (
+		            [_tipovie_hierarchy];
+		            "типовые ур4"; _tipovie_lvl4_Amt;
+		            "типовые ур3"; _tipovie_lvl3_Amt;
+		            "типовые ур2"; _tipovie_lvl2_Amt;
+		            "типовые ур1"; _tipovie_lvl1_Amt;
+		            "типовые ур0"; _tipovie_lvl0_Amt
+		        )	
+		    RETURN _result;
+		    'контракт'[типовые вед поз] <> "" --Условие на фильтрацию базы контракт по кодам с объемом
+		)
+	VAR _result = IF(_entity_show_row; _amt)
+	RETURN _result
+	
+MEASURE _measures[факт объем типовые] = 
+	VAR _entity_show_row = [_tipovie_browse_depth] <= [_tipovie_row_depth]
+	VAR _amt = 
+		CALCULATE (
+		    VAR _tipovie_lvl4_Amt = SUM ( 'факт'[объем] )
+		    VAR _tipovie_lvl3_Amt = CALCULATE ( SUM ( 'факт'[объем] ); 'типовые'[типовые ур3 вед поз] <>"")
+		    VAR _tipovie_lvl2_Amt = CALCULATE ( SUM ( 'факт'[объем] ); 'типовые'[типовые ур2 вед поз] <>"")
+			VAR _tipovie_lvl1_Amt = CALCULATE ( SUM ( 'факт'[объем] ); 'типовые'[типовые ур1 вед поз] <>"")
+			VAR _tipovie_lvl0_Amt = CALCULATE ( SUM ( 'факт'[объем] ); 'типовые'[типовые ур0 вед поз] <>"")
+		    VAR _result =
+		        SWITCH (
+		            [_tipovie_hierarchy];
+		            "типовые ур4"; _tipovie_lvl4_Amt;
+		            "типовые ур3"; _tipovie_lvl3_Amt;
+		            "типовые ур2"; _tipovie_lvl2_Amt;
+		            "типовые ур1"; _tipovie_lvl1_Amt;
+		            "типовые ур0"; _tipovie_lvl0_Amt
+		        )	
+		    RETURN _result;
+		    'факт'[типовые вед поз] <> "" --Условие на фильтрацию базы факт по кодам с объемом
+		)
+	VAR _result = IF(_entity_show_row; _amt)
+	RETURN _result
+	
+MEASURE _measures[ключевые объем типовые] = 
+	VAR _entity_show_row = [_tipovie_browse_depth] <= [_tipovie_row_depth]
+	VAR _amt = 
+		CALCULATE (
+		    VAR _tipovie_lvl4_Amt = SUM ( 'ключевые объемы'[объем] )
+		    VAR _tipovie_lvl3_Amt = CALCULATE ( SUM ( 'ключевые объемы'[объем] ); 'типовые'[типовые ур3 вед поз] <>"")
+		    VAR _tipovie_lvl2_Amt = CALCULATE ( SUM ( 'ключевые объемы'[объем] ); 'типовые'[типовые ур2 вед поз] <>"")
+			VAR _tipovie_lvl1_Amt = CALCULATE ( SUM ( 'ключевые объемы'[объем] ); 'типовые'[типовые ур1 вед поз] <>"")
+			VAR _tipovie_lvl0_Amt = CALCULATE ( SUM ( 'ключевые объемы'[объем] ); 'типовые'[типовые ур0 вед поз] <>"")
+		    VAR _result =
+		        SWITCH (
+		            [_tipovie_hierarchy];
+		            "типовые ур4"; _tipovie_lvl4_Amt;
+		            "типовые ур3"; _tipovie_lvl3_Amt;
+		            "типовые ур2"; _tipovie_lvl2_Amt;
+		            "типовые ур1"; _tipovie_lvl1_Amt;
+		            "типовые ур0"; _tipovie_lvl0_Amt
+		        )	
+		    RETURN _result;
+		    'ключевые объемы'[типовые вед поз] <> "" --Условие на фильтрацию базы ключевые объемы по кодам с объемом
+		)
+	VAR _result = IF(_entity_show_row; _amt)
+	RETURN _result
