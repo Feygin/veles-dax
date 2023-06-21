@@ -1,0 +1,18 @@
+﻿DEFINE 
+MEASURE _measures[карнет 1н] = SUM('карнет'[1н.часы]) --часы 1н по карнету
+
+MEASURE _measures[карнет 1к] = SUM('карнет'[1к.часы]) --часы 1к по карнету
+
+MEASURE _measures[карнет 1н накопительно] = --часы 1н по карнету,накопительно  (с начала строительства), по текущий (выбранный) период
+VAR _first_date_in_selection = MIN('календарь'[дата]) --первая дата в выбранном периоде
+VAR _last_date_in_selection = MAX('календарь'[дата]) --последняя дата в выбранном периоде
+VAR _last_date_available = CALCULATE(MAX('факт'[дата]); ALL('факт'); VALUES('проект'[проект 1с])) --последняя дата выполнения работы по проекту
+VAR _show_data = _first_date_in_selection <= _last_date_available --отчет выводим только для периодов, когда проводились работы
+VAR _rt = 
+	CALCULATE(
+	    [карнет 1н];
+	    'календарь'[дата] <= _last_date_in_selection;
+	    ALL('календарь')
+	)
+return
+    if(_show_data; _rt)

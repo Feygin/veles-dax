@@ -1,0 +1,71 @@
+﻿--сравнение ключевых и факта
+----абсолютные
+MEASURE _measures[дельта ключевые часы - факт + доп] = //обновить в модели
+	VAR _value_to_compare = [ключевые часы]
+	VAR _base_value = [факт + доп часы]
+	VAR _delta = _value_to_compare - _base_value
+	RETURN
+		IF(
+			NOT(ISBLANK(_value_to_compare))
+				&& NOT(ISBLANK(_base_value));
+				_delta
+			)
+MEASURE _measures[дельта ключевые объем - факт типовые] = 
+	VAR _value_to_compare = [ключевые объем типовые]
+	VAR _base_value = [факт объем типовые]
+	VAR _delta = _value_to_compare - _base_value
+	RETURN
+		IF(
+			NOT(ISBLANK(_value_to_compare))
+				&& NOT(ISBLANK(_base_value));
+				_delta
+			)
+----%
+MEASURE _measures[дельта ключевые часы % факт + доп] = DIVIDE([дельта ключевые часы - факт + доп]; [факт + доп часы]) //обновить в модели
+MEASURE _measures[дельта ключевые объемы % факт] = DIVIDE([дельта ключевые объем - факт типовые]; [факт объем типовые])
+----сравнение фактических и нормочасов
+MEASURE _measures[дельта факт часы - нормочасы] = 
+	VAR _value_to_compare = [факт часы]
+	VAR _base_value = [факт нормочасы]
+	VAR _delta = _value_to_compare - _base_value
+	RETURN
+		IF(
+			NOT(ISBLANK(_value_to_compare))
+				&& NOT(ISBLANK(_base_value));
+				_delta
+			)
+MEASURE _measures[дельта факт часы - нормочасы зимний] = 
+	VAR _value_to_compare = [факт часы]
+	VAR _base_value = [факт нормочасы зимний]
+	VAR _delta = _value_to_compare - _base_value
+	RETURN
+		IF(
+			NOT(ISBLANK(_value_to_compare))
+				&& NOT(ISBLANK(_base_value));
+				_delta
+			)
+MEASURE _measures[дельта факт + доп часы - нормочасы] = 
+	VAR _value_to_compare = [факт + доп часы]
+	VAR _base_value = [факт нормочасы]
+	VAR _delta = _value_to_compare - _base_value
+	RETURN
+		IF(
+			NOT(ISBLANK(_value_to_compare))
+				&& NOT(ISBLANK(_base_value));
+				_delta
+			)
+MEASURE _measures[дельта факт + доп часы - нормочасы зимний] = 
+	VAR _value_to_compare = [факт + доп часы]
+	VAR _base_value = [факт нормочасы зимний]
+	VAR _delta = _value_to_compare - _base_value
+	RETURN
+		IF(
+			NOT(ISBLANK(_value_to_compare))
+				&& NOT(ISBLANK(_base_value));
+				_delta
+			)
+--%
+MEASURE _measures[дельта факт часы % нормочасы] = DIVIDE([дельта факт часы - нормочасы]; [факт нормочасы])
+MEASURE _measures[дельта факт часы % нормочасы зимний] = DIVIDE([дельта факт часы - нормочасы зимний]; [факт нормочасы зимний])
+MEASURE _measures[дельта факт часы + доп % нормочасы] = DIVIDE([дельта факт + доп часы - нормочасы]; [факт нормочасы])
+MEASURE _measures[дельта факт часы + доп % нормочасы зимний] = DIVIDE([дельта факт + доп часы - нормочасы зимний]; [факт нормочасы зимний])

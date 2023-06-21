@@ -1,0 +1,98 @@
+﻿MEASURE _measures[контракт нормочасы] = 
+	VAR _entity_show_row = [_tipovie_browse_depth] <= [_tipovie_row_depth]
+	VAR _amt = SUM('контракт'[нормочасы])
+	VAR _result = IF(_entity_show_row; _amt)
+	RETURN _result
+
+MEASURE _measures[факт нормочасы] = 
+	VAR _entity_show_row = [_tipovie_browse_depth] <= [_tipovie_row_depth]
+	VAR _amt = SUM('факт'[нормочасы])
+	VAR _result = IF(_entity_show_row; _amt)
+	RETURN _result
+
+MEASURE _measures[факт нормочасы зимний] = 
+	VAR _entity_show_row = [_tipovie_browse_depth] <= [_tipovie_row_depth]
+	VAR _amt = SUM('факт'[нормочасы зимний])
+	VAR _result = IF(_entity_show_row; _amt)
+	RETURN _result
+	
+MEASURE _measures[факт часы] = 
+	VAR _entity_show_row = [_tipovie_browse_depth] <= [_tipovie_row_depth]
+	VAR _amt = SUM('факт'[часы])
+	VAR _result = IF(_entity_show_row; _amt)
+	RETURN _result
+
+MEASURE _measures[факт часы техника] = 
+	VAR _entity_show_row = [_tipovie_browse_depth] <= [_tipovie_row_depth]
+	VAR _amt = SUM('факт'[часы техника])
+	VAR _result = IF(_entity_show_row; _amt)
+	RETURN _result
+	
+MEASURE _measures[доп часы] =
+	VAR _entity_show_row = [_tipovie_browse_depth] <= [_tipovie_row_depth]
+	VAR _amt = SUM('дополнительные часы'[часы])
+	VAR _result = IF(_entity_show_row; _amt)
+	RETURN _result
+	
+MEASURE _measures[ключевые часы] = 
+	VAR _entity_show_row = [_tipovie_browse_depth] <= [_tipovie_row_depth]
+	VAR _amt = SUM('ключевые часы'[часы])
+	VAR _result = IF(_entity_show_row; _amt)
+	RETURN _result
+
+--производные
+MEASURE _measures[факт + доп часы] = 
+	VAR _amt = [факт часы] + [доп часы]
+    VAR _result =
+            SWITCH (
+                [_tipovie_hierarchy];
+                "типовые ур0";_amt;
+                "без фильтра";_amt --выводим сумму по доп часам на без фильтра
+                
+            )    
+    RETURN _result
+
+MEASURE _measures[доп часы % факт] = 
+	VAR _pct = DIVIDE([доп часы]; [факт часы])
+	VAR _result =
+	        SWITCH (
+	            [_tipovie_hierarchy];
+	            "типовые ур0"; _pct --выводим процент по доп часам на 0 уровень
+	        )	
+	RETURN _result 
+
+MEASURE _measures[факт нормочасы % контракт] = DIVIDE([факт нормочасы]; [контракт нормочасы])
+
+MEASURE _measures[факт часы % уровень] = 
+	VAR _entity_show_row = [_tipovie_browse_depth] <= [_tipovie_row_depth]
+	VAR _all_tipovie = ALLSELECTED('типовые')
+	VAR _tipovie_lvl1 =
+		CALCULATETABLE(
+			'типовые';
+			_all_tipovie;
+			VALUES('типовые'[типовые ур1])
+		)
+	VAR _tipovie_lvl2 =
+		CALCULATETABLE(
+			'типовые';
+			_all_tipovie;
+			VALUES('типовые'[типовые ур2])
+		)
+	VAR _tipovie_lvl3 =
+		CALCULATETABLE(
+			'типовые';
+			_all_tipovie;
+			VALUES('типовые'[типовые ур3])
+		)
+	VAR _numerator = SUM('факт'[часы])
+	VAR _denominator =
+		SWITCH(
+			[_tipovie_hierarchy];
+			"типовые ур4"; CALCULATE(SUM('факт'[часы]); _tipovie_lvl3); --не можем использовать меру [факт часы]
+			"типовые ур3"; CALCULATE(SUM('факт'[часы]); _tipovie_lvl2); --тк из-за allselected [_entity_show_row]
+			"типовые ур2"; CALCULATE(SUM('факт'[часы]); _tipovie_lvl1); --некорректно считается
+			"типовые ур1"; CALCULATE(SUM('факт'[часы]); _all_tipovie)
+		)
+	VAR _pct = DIVIDE(_numerator; _denominator)
+	VAR _result = IF(_entity_show_row; _pct)
+	RETURN _result

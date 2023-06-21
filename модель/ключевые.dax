@@ -1,0 +1,23 @@
+﻿MEASURE _measures[_kluchevie_hierarchy] = 
+    VAR _is_kluchevie_lvl1_in_scope = 
+    	ISFILTERED('ключевые'[ключевые ур1 наименование]) ||
+    	ISFILTERED('ключевые'[ключевые ур1 наименование с ед изм])
+    VAR _is_kluchevie_lvl0_in_scope = 
+    	ISFILTERED('ключевые'[ключевые ур0 наименование]) ||
+    	ISFILTERED('ключевые'[ключевые ур0 наименование с ед изм])
+	VAR _browsing_lvl = 
+		SWITCH(
+			TRUE();
+			_is_kluchevie_lvl1_in_scope; "ключевые ур1";
+			_is_kluchevie_lvl0_in_scope; "ключевые ур0";
+			"без фильтра"
+ 		)
+	RETURN _browsing_lvl
+
+MEASURE _measures[_kluchevie_browse_depth] =
+	ISFILTERED('ключевые'[ключевые ур1 наименование]) +
+	ISFILTERED('ключевые'[ключевые ур1 наименование с ед изм]) +
+	ISFILTERED('ключевые'[ключевые ур0 наименование]) +
+	ISFILTERED('ключевые'[ключевые ур0 наименование с ед изм])
+
+MEASURE _measures[_kluchevie_row_depth] = MAX('ключевые'[ключевые уровень глубина])

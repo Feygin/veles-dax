@@ -1,0 +1,109 @@
+﻿MEASURE _measures[статистика факт кол-во уникальных типовых для ур0] = 
+	VAR _entity_show_row = [_tipovie_browse_depth] <= [_tipovie_row_depth]
+	VAR _unique_codes = 
+		CALCULATE(
+			DISTINCTCOUNT('факт'[типовые]);
+			'типовые'[типовые уровень] = 0
+		)
+	VAR _result = IF(_entity_show_row, _unique_codes)
+	RETURN _result
+
+MEASURE _measures[статистика факт кол-во уникальных типовых для ур1] = 
+	VAR _entity_show_row = [_tipovie_browse_depth] <= [_tipovie_row_depth]
+	VAR _unique_codes = 
+		CALCULATE(
+			DISTINCTCOUNT('факт'[типовые]);
+			'типовые'[типовые уровень] = 1
+		)
+	VAR _result = IF(_entity_show_row, _unique_codes)
+	RETURN _result
+MEASURE _measures[статистика факт кол-во уникальных типовых для ур2] = 
+	VAR _entity_show_row = [_tipovie_browse_depth] <= [_tipovie_row_depth]
+	VAR _unique_codes = 
+		CALCULATE(
+			DISTINCTCOUNT('факт'[типовые]);
+			'типовые'[типовые уровень] = 2
+		)
+	VAR _result = IF(_entity_show_row, _unique_codes)
+	RETURN _result
+MEASURE _measures[статистика факт кол-во уникальных типовых для ур3] = 
+	VAR _entity_show_row = [_tipovie_browse_depth] <= [_tipovie_row_depth]
+	VAR _unique_codes = 
+		CALCULATE(
+			DISTINCTCOUNT('факт'[типовые]);
+			'типовые'[типовые уровень] = 3
+		)
+	VAR _result = IF(_entity_show_row, _unique_codes)
+	RETURN _result
+MEASURE _measures[статистика факт кол-во уникальных типовых для ур4] = 
+	VAR _entity_show_row = [_tipovie_browse_depth] <= [_tipovie_row_depth]
+	VAR _unique_codes = 
+		CALCULATE(
+			DISTINCTCOUNT('факт'[типовые]);
+			'типовые'[типовые уровень] = 4
+		)
+	VAR _result = IF(_entity_show_row, _unique_codes)
+	RETURN _result
+	
+MEASURE _measures[статистика факт даты журналов] = 
+	VAR _entity_show_row = [_tipovie_browse_depth] <= [_tipovie_row_depth]
+	VAR _min_date = MIN('факт'[журнал дата])
+	VAR _max_date = MAX('факт'[журнал дата])
+	VAR _concatenate_date = 
+		IF( 
+			_min_date <> _max_date,
+			FORMAT(_min_date, "DD/MM/YYYY") & 
+			" - " & FORMAT(_max_date, "DD/MM/YYYY"),
+			FORMAT(_min_date, "DD/MM/YYYY")
+		)
+	VAR _result =
+		IF(
+			NOT(ISBLANK(_min_date)) &&
+				_entity_show_row,
+			_concatenate_date
+		)
+	RETURN _result
+MEASURE _measures[статистика факт даты работ] = 
+	VAR _entity_show_row = [_tipovie_browse_depth] <= [_tipovie_row_depth]
+	VAR _min_date = MIN('факт'[дата])
+	VAR _max_date = MAX('факт'[дата])
+	VAR _concatenate_date = 
+		IF( 
+			_min_date <> _max_date,
+			FORMAT(_min_date, "MM/YYYY") & 
+			" - " & FORMAT(_max_date, "MM/YYYY"),
+			FORMAT(_min_date, "MM/YYYY")
+		)
+	VAR _result =
+		IF(
+			NOT(ISBLANK(_min_date)) &&
+				_entity_show_row,
+			_concatenate_date
+		)
+	RETURN _result
+MEASURE _measures[статистика ключевые даты работ] = 
+	VAR _entity_show_row = [_tipovie_browse_depth] <= [_tipovie_row_depth]
+	VAR _min_date = MIN(MIN('ключевые часы'[дата]),MIN('ключевые объемы'[дата]))
+	VAR _max_date = MAX(MAX('ключевые часы'[дата]),MAX('ключевые объемы'[дата]))
+	VAR _concatenate_date = 
+		IF( 
+			_min_date <> _max_date,
+			FORMAT(_min_date, "MM/YYYY") & 
+			" - " & FORMAT(_max_date, "MM/YYYY"),
+			FORMAT(_min_date, "MM/YYYY")
+		)
+	VAR _result =
+		IF(
+			NOT(ISBLANK(_min_date)) &&
+				_entity_show_row,
+			_concatenate_date
+		)
+	RETURN _result
+
+-----------------------
+MEASURE _measures[статистика контракт кол-во строк] = COUNTROWS('контракт')
+MEASURE _measures[статистика факт кол-во строк] = COUNTROWS('факт')
+MEASURE _measures[статистика доп часы кол-во строк] = COUNTROWS('дополнительные часы')
+MEASURE _measures[статистика доп часы кол-во строк] = COUNTROWS('ключевые часы')
+MEASURE _measures[статистика доп часы кол-во строк] = COUNTROWS('ключевые объемы')
+
